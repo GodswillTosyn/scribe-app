@@ -277,7 +277,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <nav className="project-nav flex items-center justify-between px-4 h-11 shrink-0 border-b" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
         <div className="flex items-center gap-2 min-w-0">
           <button onClick={() => router.push("/")} className="flex items-center justify-center w-7 h-7 rounded-md shrink-0 transition-colors" style={{ color: "var(--muted)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Back to Home">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
           <div className="flex items-center justify-center w-6 h-6 rounded shrink-0" style={{ background: "var(--purple)", color: "#fff" }}>
@@ -303,7 +303,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             <button onClick={() => setShowLibrary(!showLibrary)} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
               style={{ color: showLibrary ? "var(--purple)" : "var(--muted)", background: showLibrary ? "var(--purple-bg)" : "transparent" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = showLibrary ? "var(--purple-bg)" : "var(--hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = showLibrary ? "var(--purple-bg)" : "transparent")}>
+              onMouseLeave={(e) => (e.currentTarget.style.background = showLibrary ? "var(--purple-bg)" : "transparent")}
+              title="View and manage PDF sources">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
               Sources
             </button>
@@ -311,7 +312,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <button onClick={handleShare} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
             style={{ color: "var(--muted)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Share project">
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Copy shareable link">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
             </svg>

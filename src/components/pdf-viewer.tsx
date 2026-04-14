@@ -126,7 +126,10 @@ export default function PdfViewer({
       setTimeout(() => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed) { setPopover(null); return; }
-        const text = sel.toString().trim();
+        let text = sel.toString().trim();
+        // Clean up partial words at boundaries from PDF text selection
+        text = text.replace(/^[^\s]*\s/, (m) => m.length > 20 ? '' : m).replace(/\s[^\s]*$/, (m) => m.length > 20 ? '' : m);
+        text = text.replace(/\s+/g, ' ').trim();
         if (text.length < 2) { setPopover(null); return; }
         const anchor = sel.anchorNode, focus = sel.focusNode;
         if (!anchor || !focus || (!c.contains(anchor) && !c.contains(focus))) { setPopover(null); return; }
@@ -294,16 +297,16 @@ export default function PdfViewer({
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-4 py-1.5 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
-        <button onClick={() => setScale((s) => Math.max(0.3, s - 0.1))} className="flex items-center justify-center w-7 h-7 rounded transition-colors" style={{ color: "var(--muted)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+        <button onClick={() => setScale((s) => Math.max(0.5, s - 0.1))} disabled={scale <= 0.5} className="flex items-center justify-center w-7 h-7 rounded transition-colors disabled:opacity-30" style={{ color: "var(--muted)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Zoom out">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
         <button onClick={() => setScale(autoScale)} className="text-xs tabular-nums min-w-[3rem] text-center font-medium rounded transition-colors" style={{ color: "var(--muted)" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Fit to width">
           {Math.round(scale * 100)}%
         </button>
-        <button onClick={() => setScale((s) => Math.min(3, s + 0.1))} className="flex items-center justify-center w-7 h-7 rounded transition-colors" style={{ color: "var(--muted)" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+        <button onClick={() => setScale((s) => Math.min(5, s + 0.1))} disabled={scale >= 5} className="flex items-center justify-center w-7 h-7 rounded transition-colors disabled:opacity-30" style={{ color: "var(--muted)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Zoom in">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
         <div className="w-px h-4 mx-1" style={{ background: "var(--border)" }} />

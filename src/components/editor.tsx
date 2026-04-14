@@ -325,10 +325,16 @@ function InspectorPanel({
               ) : (
                 <div className="flex flex-col gap-1.5">
                   {citations.map((c, i) => (
-                    <div key={c.id} className="group relative rounded-lg transition-colors" style={{ background: "var(--purple-bg)" }}
+                    <div key={c.id} className="group relative rounded-lg transition-colors cursor-pointer" style={{ background: "var(--purple-bg)" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple-bg)")}>
                       <button onClick={() => onClickCitation(c)} className="flex flex-col text-left p-2 w-full">
-                        <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? `, ${c.year}` : ""}, p.&nbsp;{c.page}</div>
+                        <div className="flex items-center justify-between">
+                          <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? `, ${c.year}` : ""}, p.&nbsp;{c.page}</div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium shrink-0 ml-1" style={{ color: "var(--purple)" }}>
+                            Go to source
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                          </div>
+                        </div>
                         <div className="text-[11px] leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.85 }}>&ldquo;{c.text.slice(0, 80)}{c.text.length > 80 ? "..." : ""}&rdquo;</div>
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
@@ -454,6 +460,8 @@ export default function Editor({
   }, [activeTabId, tabs]);
 
   // ─── Version History ───
+  const [renamingTabId, setRenamingTabId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const lastSavedContentRef = useRef(initialContent);
 
@@ -522,10 +530,12 @@ export default function Editor({
         const authors = payload.authors || payload.filename.replace(/\.pdf$/i, "");
         const year = payload.year || "n.d.";
         const apaRef = `(${authors}, ${year}, p.\u00A0${payload.page})`;
+        // Clean up line breaks and extra whitespace from PDF text
+        const cleanText = payload.text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
 
         ed.chain()
           .focus("end")
-          .insertContent(`<p>"${payload.text}" ${apaRef}</p>`)
+          .insertContent(`<p>"${cleanText}" ${apaRef}</p>`)
           .run();
       });
     };
@@ -740,6 +750,7 @@ export default function Editor({
             <button
               key={tab.id}
               onClick={() => switchTab(tab.id)}
+              onDoubleClick={(e) => { e.stopPropagation(); setRenamingTabId(tab.id); setRenameValue(tab.label); }}
               className="flex items-center gap-1 px-3 h-8 text-[11px] font-medium border-r transition-colors relative"
               style={{
                 borderColor: "var(--border)",
@@ -747,11 +758,25 @@ export default function Editor({
                 color: tab.id === activeTabId ? "var(--foreground)" : "var(--muted)",
               }}
             >
-              {tab.label}
+              {renamingTabId === tab.id ? (
+                <input
+                  autoFocus
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => { setTabs((prev) => prev.map((t) => t.id === tab.id ? { ...t, label: renameValue.trim() || t.label } : t)); setRenamingTabId(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") { setTabs((prev) => prev.map((t) => t.id === tab.id ? { ...t, label: renameValue.trim() || t.label } : t)); setRenamingTabId(null); } if (e.key === "Escape") setRenamingTabId(null); }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="w-20 bg-transparent border-b outline-none text-[11px]"
+                  style={{ color: "var(--foreground)", borderColor: "var(--purple)" }}
+                />
+              ) : (
+                tab.label
+              )}
               {tabs.length > 1 && (
                 <span
                   onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                   className="ml-1 flex items-center justify-center w-4 h-4 rounded transition-colors"
+                  title="Close tab"
                   onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
                   onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                 >

@@ -24,10 +24,11 @@ export default function PdfLibrary({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editAuthors, setEditAuthors] = useState("");
   const [editYear, setEditYear] = useState("");
-  const [pendingPdf, setPendingPdf] = useState<{ file: File; name: string } | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<{ file: File; name: string }[]>([]);
   const [pendingAuthors, setPendingAuthors] = useState("");
   const [pendingYear, setPendingYear] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emptyFileInputRef = useRef<HTMLInputElement>(null);
 
   const toggleSelect = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -59,9 +60,17 @@ export default function PdfLibrary({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f && f.type === "application/pdf") {
-      setPendingPdf({ file: f, name: f.name });
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const pdfFiles: { file: File; name: string }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      if (f.type === "application/pdf") {
+        pdfFiles.push({ file: f, name: f.name });
+      }
+    }
+    if (pdfFiles.length > 0) {
+      setPendingFiles(pdfFiles);
       setPendingAuthors("");
       setPendingYear("");
     }
@@ -69,13 +78,12 @@ export default function PdfLibrary({
   };
 
   const confirmAdd = () => {
-    if (!pendingPdf) return;
-    // We'll pass metadata via a custom event since onAdd only takes File
-    // Instead, extend the flow: add file, then update meta
-    onAdd(pendingPdf.file);
-    // Store pending meta to apply after add
-    window.__scribePendingMeta = { authors: pendingAuthors, year: pendingYear };
-    setPendingPdf(null);
+    if (pendingFiles.length === 0) return;
+    for (const pf of pendingFiles) {
+      window.__scribePendingMeta = { authors: pendingAuthors, year: pendingYear };
+      onAdd(pf.file);
+    }
+    setPendingFiles([]);
   };
 
   return (
@@ -119,7 +127,7 @@ export default function PdfLibrary({
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
           </svg>
           Add
-          <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+          <input ref={fileInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleFileChange} />
         </label>
         <div className="relative group">
           <button
@@ -138,16 +146,19 @@ export default function PdfLibrary({
 
       {/* Cards */}
       <div className="flex-1 overflow-y-auto p-3">
-        {pdfs.length === 0 && !pendingPdf ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
+        {pdfs.length === 0 && pendingFiles.length === 0 ? (
+          <label className="flex flex-col items-center justify-center h-full gap-4 cursor-pointer">
             <div className="w-16 h-16 rounded-2xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--purple-bg), rgba(109,40,217,0.12))" }}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
               </svg>
             </div>
-            <p className="text-xs text-center" style={{ color: "var(--muted)" }}>Add your first source PDF</p>
-          </div>
+            <p className="text-xs text-center" style={{ color: "var(--muted)" }}>Click here to add your first source PDF</p>
+            <input ref={emptyFileInputRef} type="file" accept="application/pdf" multiple className="hidden" onChange={handleFileChange} />
+          </label>
         ) : (
+          <>
+          <p className="text-[10px] text-center mb-2" style={{ color: "var(--muted)", opacity: 0.7 }}>Click a source to view it</p>
           <div className="grid grid-cols-2 gap-3">
             {pdfs.map((pdf) => {
               const isActive = pdf.id === activePdfId;
@@ -211,7 +222,7 @@ export default function PdfLibrary({
                           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.95)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.8)")} title="Edit">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); onRemove([pdf.id]); }} className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                        <button onClick={(e) => { e.stopPropagation(); onRemove([pdf.id]); setSelected((prev) => { const next = new Set(prev); next.delete(pdf.id); return next; }); }} className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
                           style={{ background: "rgba(239,68,68,0.1)", backdropFilter: "blur(4px)", color: "#ef4444" }}
                           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.2)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.1)")} title="Remove">
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -219,14 +230,7 @@ export default function PdfLibrary({
                       </div>
                     )}
 
-                    {/* Active badge */}
-                    {isActive && (
-                      <div className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-0.5 rounded-lg text-[9px] font-semibold"
-                        style={{ background: "var(--purple)", color: "#fff" }}>
-                        <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                        Viewing
-                      </div>
-                    )}
+                    {/* Active highlight is shown via border only */}
                   </div>
 
                   {/* Content area */}
@@ -238,6 +242,7 @@ export default function PdfLibrary({
                           onKeyDown={(e) => e.key === "Enter" && saveEdit()} />
                         <div className="flex gap-1.5">
                           <input value={editYear} onChange={(e) => setEditYear(e.target.value)} placeholder="Year"
+                            type="number" pattern="[0-9]*" inputMode="numeric" maxLength={4} min="1900" max="2099"
                             className="flex-1 px-2.5 py-1.5 rounded-lg text-[11px] outline-none border" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
                             onKeyDown={(e) => e.key === "Enter" && saveEdit()} />
                           <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-[10px] font-semibold" style={{ background: "var(--purple)", color: "#fff" }}>Save</button>
@@ -261,11 +266,12 @@ export default function PdfLibrary({
               );
             })}
           </div>
+          </>
         )}
       </div>
 
       {/* Add PDF modal — author/year prompt */}
-      {pendingPdf && (
+      {pendingFiles.length > 0 && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ background: "rgba(0,0,0,0.4)" }}>
           <div
             className="w-[340px] rounded-2xl p-5 flex flex-col gap-4"
@@ -283,7 +289,7 @@ export default function PdfLibrary({
               </div>
               <div>
                 <div className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Add Source</div>
-                <div className="text-[11px] truncate max-w-[220px]" style={{ color: "var(--muted)" }}>{pendingPdf.name}</div>
+                <div className="text-[11px] truncate max-w-[220px]" style={{ color: "var(--muted)" }}>{pendingFiles.length === 1 ? pendingFiles[0].name : `${pendingFiles.length} files selected`}</div>
               </div>
             </div>
 
@@ -307,6 +313,7 @@ export default function PdfLibrary({
                 value={pendingYear}
                 onChange={(e) => setPendingYear(e.target.value)}
                 placeholder="e.g. 2023"
+                type="number" pattern="[0-9]*" inputMode="numeric" maxLength={4} min="1900" max="2099"
                 className="w-full px-3 py-2 rounded-lg text-xs outline-none border"
                 style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
                 onKeyDown={(e) => e.key === "Enter" && confirmAdd()}
@@ -315,7 +322,7 @@ export default function PdfLibrary({
 
             <div className="flex gap-2">
               <button
-                onClick={() => setPendingPdf(null)}
+                onClick={() => setPendingFiles([])}
                 className="flex-1 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
                 style={{ background: "var(--hover)", color: "var(--muted)" }}
               >
