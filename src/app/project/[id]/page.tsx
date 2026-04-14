@@ -292,10 +292,12 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           <span className="auto-saved-badge text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--hover)", color: "var(--muted)" }}>Auto-saved</span>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          <button onClick={() => setFocusMode(!focusMode)} className="hide-mobile flex items-center justify-center w-7 h-7 rounded-md transition-colors"
+          <button onClick={() => setFocusMode(!focusMode)} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
             style={{ color: focusMode ? "var(--purple)" : "var(--muted)", background: focusMode ? "var(--purple-bg)" : "transparent" }}
-            onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = "var(--hover)"; }} onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = focusMode ? "var(--purple-bg)" : "transparent"; }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+            onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = "var(--hover)"; }} onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = focusMode ? "var(--purple-bg)" : "transparent"; }}
+            title="Hide PDF panel and write distraction-free">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
+            {focusMode ? "Exit Focus" : "Focus"}
           </button>
           {!focusMode && (
             <button onClick={() => setShowLibrary(!showLibrary)} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
