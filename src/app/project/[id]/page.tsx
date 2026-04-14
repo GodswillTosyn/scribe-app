@@ -120,6 +120,28 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       if (project) {
         await db.projects.update(id, { pdfs: [...project.pdfs, newPdf], activePdfId: pdfId, updatedAt: Date.now() });
         toast.success(`${file.name} added`);
+
+        // Try DOI auto-detection from file text (async, non-blocking)
+        if (!meta.authors) {
+          try {
+            const text = await file.text();
+            const doiMatch = text.match(/10\.\d{4,}\/[^\s]+/);
+            if (doiMatch) {
+              const doi = doiMatch[0].replace(/[.,;)\]]+$/, "");
+              const doiRes = await fetch(`/api/doi?doi=${encodeURIComponent(doi)}`);
+              if (doiRes.ok) {
+                const doiData = await doiRes.json();
+                if (doiData.authors || doiData.year) {
+                  const updatedPdfs = [...project.pdfs, newPdf].map((p) =>
+                    p.id === pdfId ? { ...p, authors: doiData.authors || p.authors, year: doiData.year || p.year } : p
+                  );
+                  await db.projects.update(id, { pdfs: updatedPdfs, updatedAt: Date.now() });
+                  toast.success(`Auto-filled metadata from DOI`);
+                }
+              }
+            }
+          } catch { /* DOI detection is best-effort */ }
+        }
       }
     };
     reader.readAsDataURL(file);

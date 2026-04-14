@@ -19,6 +19,7 @@ import type { ChatMessage, CitationRecord, VersionSnapshot } from "@/lib/db";
 import { db } from "@/lib/db";
 import { exportToWord, exportToPdf } from "@/lib/export";
 import AiChat from "./ai-chat";
+import ArxivSearch from "./arxiv-search";
 import VersionHistory from "./version-history";
 import toast from "react-hot-toast";
 
@@ -258,7 +259,14 @@ function InspectorPanel({
   chatHistory: ChatMessage[]; onUpdateChat: (msgs: ChatMessage[]) => void;
   getContext: () => string;
 }) {
-  const [tab, setTab] = useState<"citations" | "ai">("citations");
+  const [tab, setTab] = useState<"citations" | "ai" | "arxiv">("citations");
+
+  // Auto-switch to arXiv tab when "Find Related" is triggered
+  useEffect(() => {
+    const handler = () => setTab("arxiv");
+    window.addEventListener("scribe:arxiv-search", handler);
+    return () => window.removeEventListener("scribe:arxiv-search", handler);
+  }, []);
 
   if (!open) {
     return (
@@ -268,6 +276,10 @@ function InspectorPanel({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
         </button>
         {citations.length > 0 && <span className="text-[8px] font-bold px-1 rounded-full" style={{ background: "var(--purple)", color: "#fff" }}>{citations.length}</span>}
+        <button onClick={() => { onToggle(); setTab("arxiv"); }} title="Search arXiv" className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" style={{ color: "var(--purple)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        </button>
         <button onClick={() => { onToggle(); setTab("ai"); }} title="Research AI" className="w-9 h-9 rounded-lg flex items-center justify-center transition-colors ai-glow-btn"
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           style={{ boxShadow: "0 0 8px rgba(124,58,237,0.25), 0 0 2px rgba(59,130,246,0.2)" }}>
@@ -303,8 +315,17 @@ function InspectorPanel({
             <defs><linearGradient id="ai-g3" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#3B82F6" /></linearGradient></defs>
             <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
           </svg>
-          Research AI
+          AI
           {tab === "ai" && <div className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: "linear-gradient(90deg, #7C3AED, #3B82F6)" }} />}
+        </button>
+        <button
+          onClick={() => setTab("arxiv")}
+          className="flex-1 flex items-center justify-center gap-1.5 h-10 text-[11px] font-medium transition-colors relative"
+          style={{ color: tab === "arxiv" ? "var(--purple)" : "var(--muted)" }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          arXiv
+          {tab === "arxiv" && <div className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: "var(--purple)" }} />}
         </button>
         <button onClick={onToggle} className="flex items-center justify-center w-9 h-10 transition-colors" style={{ color: "var(--muted)" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
@@ -348,9 +369,13 @@ function InspectorPanel({
                 </div>
               )}
             </motion.div>
-          ) : (
+          ) : tab === "ai" ? (
             <motion.div key="ai" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0">
               <AiChat chatHistory={chatHistory} onUpdateHistory={onUpdateChat} getContext={getContext} />
+            </motion.div>
+          ) : (
+            <motion.div key="arxiv" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0">
+              <ArxivSearch />
             </motion.div>
           )}
         </AnimatePresence>
@@ -541,6 +566,13 @@ export default function Editor({
     };
     window.addEventListener("scribe:cite", handleCite);
     return () => window.removeEventListener("scribe:cite", handleCite);
+  }, []);
+
+  // Listen for arXiv search trigger — open panel to arXiv tab
+  useEffect(() => {
+    const handler = () => { setPanelOpen(true); };
+    window.addEventListener("scribe:arxiv-search", handler);
+    return () => window.removeEventListener("scribe:arxiv-search", handler);
   }, []);
 
   // Listen for snapshot events from PDF viewer

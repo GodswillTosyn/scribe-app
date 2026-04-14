@@ -390,6 +390,12 @@ export default function PdfViewer({
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="url(#pmg2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><defs><linearGradient id="pmg2" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#3B82F6" /></linearGradient></defs><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               Explain
             </button>
+            <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:arxiv-search", { detail: t })); }}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" style={{ color: "var(--muted)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              Find Related
+            </button>
           </div>
           <div className="w-2.5 h-2.5 rotate-45 mx-auto -mt-[5px]" style={{ background: "var(--panel-bg)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }} />
         </div>
