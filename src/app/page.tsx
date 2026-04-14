@@ -58,7 +58,7 @@ export default function Home() {
     <div className="flex flex-col h-screen">
       {/* Nav */}
       <nav
-        className="grid grid-cols-3 items-center px-6 h-14 shrink-0 border-b"
+        className="landing-nav grid grid-cols-3 items-center px-6 h-14 shrink-0 border-b"
         style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}
       >
         {/* Left — Logo */}
@@ -76,8 +76,8 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Center — Nav links */}
-        <div className="flex items-center justify-center gap-1">
+        {/* Center — Nav links (hidden on mobile) */}
+        <div className="landing-nav-center flex items-center justify-center gap-1">
           <button
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors"
             style={{ background: "var(--purple-bg)", color: "var(--purple)" }}

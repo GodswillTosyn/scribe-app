@@ -27,6 +27,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [isResizing, setIsResizing] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [draggingFile, setDraggingFile] = useState(false);
+  const [mobilePdfOpen, setMobilePdfOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { if (project) setNameValue(project.name); }, [project?.name]);
@@ -226,31 +227,32 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
   return (
     <div className={`flex flex-col h-screen ${focusMode ? "focus-mode" : ""}`}>
-      <nav className="flex items-center justify-between px-4 h-11 shrink-0 border-b" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.push("/")} className="flex items-center justify-center w-7 h-7 rounded-md transition-colors" style={{ color: "var(--muted)" }}
+      {/* Nav bar — compact on mobile */}
+      <nav className="project-nav flex items-center justify-between px-4 h-11 shrink-0 border-b" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
+        <div className="flex items-center gap-2 min-w-0">
+          <button onClick={() => router.push("/")} className="flex items-center justify-center w-7 h-7 rounded-md shrink-0 transition-colors" style={{ color: "var(--muted)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <div className="flex items-center justify-center w-6 h-6 rounded" style={{ background: "var(--purple)", color: "#fff" }}>
+          <div className="flex items-center justify-center w-6 h-6 rounded shrink-0" style={{ background: "var(--purple)", color: "#fff" }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
           </div>
           {editingName ? (
             <input autoFocus value={nameValue} onChange={(e) => setNameValue(e.target.value)} onBlur={saveName} onKeyDown={(e) => e.key === "Enter" && saveName()}
-              className="text-sm font-semibold bg-transparent border-b outline-none px-1" style={{ color: "var(--foreground)", borderColor: "var(--purple)" }} />
+              className="text-sm font-semibold bg-transparent border-b outline-none px-1 min-w-0" style={{ color: "var(--foreground)", borderColor: "var(--purple)" }} />
           ) : (
-            <span className="text-sm font-semibold tracking-tight cursor-pointer" style={{ color: "var(--foreground)" }} onClick={() => setEditingName(true)}>{project.name}</span>
+            <span className="project-nav-name text-sm font-semibold tracking-tight cursor-pointer" style={{ color: "var(--foreground)" }} onClick={() => setEditingName(true)}>{project.name}</span>
           )}
-          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ background: "var(--hover)", color: "var(--muted)" }}>Auto-saved</span>
+          <span className="auto-saved-badge text-[10px] px-1.5 py-0.5 rounded shrink-0" style={{ background: "var(--hover)", color: "var(--muted)" }}>Auto-saved</span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => setFocusMode(!focusMode)} className="flex items-center justify-center w-7 h-7 rounded-md transition-colors"
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={() => setFocusMode(!focusMode)} className="hide-mobile flex items-center justify-center w-7 h-7 rounded-md transition-colors"
             style={{ color: focusMode ? "var(--purple)" : "var(--muted)", background: focusMode ? "var(--purple-bg)" : "transparent" }}
             onMouseEnter={(e) => { if (!focusMode) e.currentTarget.style.background = "var(--hover)"; }} onMouseLeave={(e) => { if (!focusMode) e.currentTarget.style.background = focusMode ? "var(--purple-bg)" : "transparent"; }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>
           </button>
           {!focusMode && (
-            <button onClick={() => setShowLibrary(!showLibrary)} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+            <button onClick={() => setShowLibrary(!showLibrary)} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
               style={{ color: showLibrary ? "var(--purple)" : "var(--muted)", background: showLibrary ? "var(--purple-bg)" : "transparent" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = showLibrary ? "var(--purple-bg)" : "var(--hover)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = showLibrary ? "var(--purple-bg)" : "transparent")}>
@@ -258,26 +260,35 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               Sources
             </button>
           )}
-          <button onClick={handleShare} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+          <button onClick={handleShare} className="hide-mobile flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
             style={{ color: "var(--muted)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Share project">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
             </svg>
-            Share
           </button>
           <ThemeToggle />
         </div>
       </nav>
 
-      <div ref={containerRef} className="flex flex-1 min-h-0" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
+      {/* Main content */}
+      <div ref={containerRef} className="flex flex-1 min-h-0" style={{ paddingBottom: "env(safe-area-inset-bottom)" }} onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
         {!focusMode && (
           <>
-            <div className={`pdf-panel-container flex flex-col shrink-0 ${draggingFile ? "drop-zone-active" : ""}`}
+            <div className={`pdf-panel-container flex flex-col shrink-0 ${draggingFile ? "drop-zone-active" : ""} ${mobilePdfOpen ? "" : "mobile-hidden"}`}
               style={{ width: `${panelWidth}%`, borderRight: "1px solid var(--border)", background: "var(--surface)", transition: isResizing ? "none" : "width 0.2s ease" }}>
+              {/* Mobile close button */}
+              <button
+                onClick={() => setMobilePdfOpen(false)}
+                className="mobile-bottom-bar shrink-0 h-10 border-b items-center justify-center gap-1.5 text-xs font-medium"
+                style={{ borderColor: "var(--border)", color: "var(--purple)", background: "var(--toolbar-bg)", display: "none" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                Close
+              </button>
               {showLibrary ? (
-                <PdfLibrary pdfs={pdfs} activePdfId={activePdfId} onSelect={handleSelectPdf} onAdd={handleAddPdf} onRemove={handleRemovePdfs} onUpdateMeta={handleUpdatePdfMeta} />
+                <PdfLibrary pdfs={pdfs} activePdfId={activePdfId} onSelect={(pdfId) => { handleSelectPdf(pdfId); }} onAdd={handleAddPdf} onRemove={handleRemovePdfs} onUpdateMeta={handleUpdatePdfMeta} />
               ) : (
                 <>
                   <button onClick={() => setShowLibrary(true)} className="flex items-center gap-1.5 px-3 h-9 shrink-0 border-b text-[11px] font-medium transition-colors"
@@ -304,6 +315,36 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
             onCitationsChange={(cits) => { db.projects.update(id, { citations: cits, updatedAt: Date.now() }); }}
             projectName={project.name} chatHistory={chatHistory} onUpdateChat={handleUpdateChat} getContext={getContext} />
         </div>
+      </div>
+
+      {/* Mobile bottom bar — visible only on small screens */}
+      <div className="mobile-bottom-bar">
+        <button onClick={() => { setMobilePdfOpen(true); setShowLibrary(true); }} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors"
+          style={{ color: mobilePdfOpen ? "var(--purple)" : "var(--muted)", background: mobilePdfOpen ? "var(--purple-bg)" : "transparent" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+          </svg>
+          <span className="text-[9px] font-medium">PDFs</span>
+        </button>
+        <button onClick={() => setMobilePdfOpen(false)} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors"
+          style={{ color: !mobilePdfOpen ? "var(--purple)" : "var(--muted)", background: !mobilePdfOpen ? "var(--purple-bg)" : "transparent" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          </svg>
+          <span className="text-[9px] font-medium">Editor</span>
+        </button>
+        <button onClick={handleShare} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors" style={{ color: "var(--muted)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+          </svg>
+          <span className="text-[9px] font-medium">Share</span>
+        </button>
+        <button onClick={() => window.dispatchEvent(new CustomEvent("scribe:export-word"))} className="flex flex-col items-center gap-0.5 py-1 px-3 rounded-lg transition-colors" style={{ color: "var(--muted)" }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          <span className="text-[9px] font-medium">Export</span>
+        </button>
       </div>
 
       <CommandPalette commands={commands} />

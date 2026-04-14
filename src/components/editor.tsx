@@ -45,7 +45,7 @@ function Grp({ label, children }: { label: string; children: React.ReactNode }) 
   return (
     <div className="flex flex-col items-center">
       <div className="flex items-center gap-0.5 px-0.5">{children}</div>
-      <span className="text-[8px] uppercase tracking-widest mt-0.5" style={{ color: "var(--muted)", opacity: 0.5 }}>{label}</span>
+      <span className="toolbar-group-label text-[8px] uppercase tracking-widest mt-0.5" style={{ color: "var(--muted)", opacity: 0.5 }}>{label}</span>
     </div>
   );
 }
@@ -105,7 +105,7 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
   const currentSize = (editor.getAttributes("textStyle").fontSize as string) || "15px";
 
   return (
-    <div className="flex items-start gap-0.5 px-2 py-1.5 border-b shrink-0 flex-wrap editor-toolbar-mobile" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
+    <div className="editor-toolbar flex items-start gap-0.5 px-2 py-1.5 border-b shrink-0 flex-wrap" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
       {/* Font family */}
       <Grp label="Font">
         <div className="relative">
