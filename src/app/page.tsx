@@ -51,7 +51,27 @@ export default function Home() {
     return new Date(ts).toLocaleDateString();
   };
 
+  const [sidebarView, setSidebarView] = useState<"all" | "recent">("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const hasProjects = projects && projects.length > 0;
+
+  // Sort/filter projects based on sidebar view and search
+  const filteredProjects = (() => {
+    if (!projects) return [];
+    let list = [...projects];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((p) => p.name.toLowerCase().includes(q));
+    }
+    if (sidebarView === "recent") {
+      const oneDayAgo = Date.now() - 86400000;
+      list = list.filter((p) => p.updatedAt > oneDayAgo);
+    }
+    return list;
+  })();
+
+  const totalPdfs = projects ? projects.reduce((sum, p) => sum + (p.pdfs?.length || 0), 0) : 0;
+  const totalCitations = projects ? projects.reduce((sum, p) => sum + (p.citations?.length || 0), 0) : 0;
 
   return (
     <div className="flex flex-col h-screen">
@@ -152,39 +172,91 @@ export default function Home() {
         {hasProjects && (
           <div className="flex min-h-full">
             {/* Sidebar */}
-            <div className="hidden md:flex flex-col shrink-0 w-56 border-r py-6 px-4" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
-              <div className="flex items-center gap-2 px-2 py-2 rounded-lg mb-1" style={{ background: "var(--purple-bg)", color: "var(--purple)" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
-                <span className="text-xs font-semibold">All Projects</span>
-                <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--purple)", color: "#fff" }}>{projects.length}</span>
+            <div className="hidden md:flex flex-col shrink-0 w-56 border-r py-5 px-3" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
+              {/* Search */}
+              <div className="flex items-center gap-2 px-2.5 py-2 rounded-lg mb-3" style={{ background: "var(--surface)", border: "1px solid var(--border)" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--muted)", opacity: 0.6 }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search projects..."
+                  className="flex-1 bg-transparent outline-none text-[11px]" style={{ color: "var(--foreground)" }} />
               </div>
-              <button className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium transition-colors" style={{ color: "var(--muted)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                Recent
-              </button>
 
-              <div className="mt-auto pt-4 border-t" style={{ borderColor: "var(--border)" }}>
-                <div className="px-2 py-2 rounded-lg text-[11px]" style={{ color: "var(--muted)", background: "var(--surface)" }}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                    <span className="font-medium">Stored locally</span>
+              {/* Nav items */}
+              <div className="flex flex-col gap-0.5 mb-4">
+                <button onClick={() => setSidebarView("all")}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors"
+                  style={{ background: sidebarView === "all" ? "var(--purple-bg)" : "transparent", color: sidebarView === "all" ? "var(--purple)" : "var(--muted)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>
+                  All Projects
+                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: sidebarView === "all" ? "var(--purple)" : "var(--hover)", color: sidebarView === "all" ? "#fff" : "var(--muted)" }}>{projects.length}</span>
+                </button>
+                <button onClick={() => setSidebarView("recent")}
+                  className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors"
+                  style={{ background: sidebarView === "recent" ? "var(--purple-bg)" : "transparent", color: sidebarView === "recent" ? "var(--purple)" : "var(--muted)" }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                  Recent
+                  <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--hover)", color: "var(--muted)" }}>{projects.filter((p) => p.updatedAt > Date.now() - 86400000).length}</span>
+                </button>
+              </div>
+
+              {/* Stats */}
+              <div className="border-t pt-3 mb-4" style={{ borderColor: "var(--border)" }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider px-2.5 mb-2" style={{ color: "var(--muted)", opacity: 0.6 }}>Overview</div>
+                <div className="flex flex-col gap-1.5 px-2.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span style={{ color: "var(--muted)" }}>Total PDFs</span>
+                    <span className="font-semibold" style={{ color: "var(--foreground)" }}>{totalPdfs}</span>
                   </div>
-                  <p style={{ opacity: 0.7, lineHeight: 1.4 }}>Your data never leaves this browser.</p>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span style={{ color: "var(--muted)" }}>Total Citations</span>
+                    <span className="font-semibold" style={{ color: "var(--foreground)" }}>{totalCitations}</span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Quick actions */}
+              <div className="border-t pt-3" style={{ borderColor: "var(--border)" }}>
+                <div className="text-[9px] font-semibold uppercase tracking-wider px-2.5 mb-2" style={{ color: "var(--muted)", opacity: 0.6 }}>Quick Actions</div>
+                <button onClick={openNewProjectModal} className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-colors" style={{ color: "var(--purple)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-bg)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  New Project
+                </button>
+                <Link href="/about" className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-colors no-underline" style={{ color: "var(--muted)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                  About Scribe
+                </Link>
+                <Link href="/privacy" className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-xs font-medium transition-colors no-underline" style={{ color: "var(--muted)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                  Privacy
+                </Link>
               </div>
             </div>
 
             {/* Main content */}
             <div className="flex-1 px-6 md:px-8 py-6">
               <div className="flex items-baseline justify-between mb-5">
-                <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>All Projects</h1>
-                <span className="text-xs" style={{ color: "var(--muted)" }}>{projects.length} project{projects.length !== 1 ? "s" : ""}</span>
+                <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+                  {sidebarView === "recent" ? "Recent Projects" : "All Projects"}
+                </h1>
+                <span className="text-xs" style={{ color: "var(--muted)" }}>
+                  {filteredProjects.length} project{filteredProjects.length !== 1 ? "s" : ""}
+                  {searchQuery && ` matching "${searchQuery}"`}
+                </span>
               </div>
 
+              {filteredProjects.length === 0 ? (
+                <div className="flex flex-col items-center py-16">
+                  <p className="text-sm" style={{ color: "var(--muted)" }}>
+                    {searchQuery ? `No projects match "${searchQuery}"` : sidebarView === "recent" ? "No projects edited in the last 24 hours" : "No projects yet"}
+                  </p>
+                </div>
+              ) : (
               <div className="landing-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
-                {projects.map((p, i) => {
+                {filteredProjects.map((p, i) => {
                   const wordCount = p.content ? p.content.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length : 0;
+                  const pdfCount = p.pdfs?.length || 0;
                   return (
                     <motion.div
                       key={p.id}
@@ -249,15 +321,11 @@ export default function Home() {
                           <h3 className="text-[13px] font-semibold truncate mb-1" style={{ color: "var(--foreground)" }}>{p.name}</h3>
                           <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--muted)" }}>
                             <span>{formatDate(p.updatedAt)}</span>
-                            {p.pdfs.length > 0 && (
-                              <>
-                                <span style={{ opacity: 0.3 }}>&middot;</span>
-                                <span className="flex items-center gap-0.5">
-                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                  {p.pdfs.length} PDF{p.pdfs.length !== 1 ? "s" : ""}
-                                </span>
-                              </>
-                            )}
+                            <span style={{ opacity: 0.3 }}>&middot;</span>
+                            <span className="flex items-center gap-0.5">
+                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                              {pdfCount} PDF{pdfCount !== 1 ? "s" : ""}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -265,6 +333,7 @@ export default function Home() {
                   );
                 })}
               </div>
+              )}
             </div>
           </div>
         )}
