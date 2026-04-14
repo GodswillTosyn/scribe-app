@@ -52,32 +52,6 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     };
   }, [isResizing]);
 
-  // Drag & drop PDF
-  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDraggingFile(true); }, []);
-  const handleDragLeave = useCallback(() => setDraggingFile(false), []);
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault(); setDraggingFile(false);
-    const file = e.dataTransfer.files[0];
-    if (file?.type === "application/pdf") handleAddPdf(file);
-  }, []);
-
-  const handleCite = useCallback((payload: CitationPayload) => {
-    if (!project) return;
-    const activePdf = project.pdfs.find((p) => p.id === project.activePdfId);
-    const authorList = activePdf?.authors?.split(/[,;&]+/).map((a) => a.trim()).filter(Boolean) || [];
-    let formattedAuthors: string;
-    if (authorList.length === 1) formattedAuthors = authorList[0];
-    else if (authorList.length === 2) formattedAuthors = `${authorList[0]} & ${authorList[1]}`;
-    else if (authorList.length > 2) formattedAuthors = `${authorList[0]} et al.`;
-    else formattedAuthors = payload.filename.replace(/\.pdf$/i, "");
-
-    const enriched: CitationPayload = { ...payload, authors: formattedAuthors, year: activePdf?.year || "n.d." };
-    window.dispatchEvent(new CustomEvent("scribe:cite", { detail: enriched }));
-    const rec: CitationRecord = { id: enriched.id, text: enriched.text, filename: enriched.filename, authors: enriched.authors, year: enriched.year, page: enriched.page, posY: enriched.posY };
-    db.projects.update(id, { citations: [...project.citations, rec], updatedAt: Date.now() });
-    toast.success("Citation inserted");
-  }, [project, id]);
-
   const handleAddPdf = useCallback(async (file: File) => {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -92,6 +66,31 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       }
     };
     reader.readAsDataURL(file);
+  }, [project, id]);
+
+  // Drag & drop PDF
+  const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); setDraggingFile(true); }, []);
+  const handleDragLeave = useCallback(() => setDraggingFile(false), []);
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setDraggingFile(false);
+    const file = e.dataTransfer.files[0];
+    if (file?.type === "application/pdf") handleAddPdf(file);
+  }, [handleAddPdf]);
+
+  const handleCite = useCallback((payload: CitationPayload) => {
+    if (!project) return;
+    const activePdf = project.pdfs.find((p) => p.id === project.activePdfId);
+    const authorList = activePdf?.authors?.split(/[,;&]+/).map((a) => a.trim()).filter(Boolean) || [];
+    let formattedAuthors: string;
+    if (authorList.length === 1) formattedAuthors = authorList[0];
+    else if (authorList.length === 2) formattedAuthors = `${authorList[0]} & ${authorList[1]}`;
+    else if (authorList.length > 2) formattedAuthors = `${authorList[0]} et al.`;
+    else formattedAuthors = payload.filename.replace(/\.pdf$/i, "");
+    const enriched: CitationPayload = { ...payload, authors: formattedAuthors, year: activePdf?.year || "n.d." };
+    window.dispatchEvent(new CustomEvent("scribe:cite", { detail: enriched }));
+    const rec: CitationRecord = { id: enriched.id, text: enriched.text, filename: enriched.filename, authors: enriched.authors, year: enriched.year, page: enriched.page, posY: enriched.posY };
+    db.projects.update(id, { citations: [...project.citations, rec], updatedAt: Date.now() });
+    toast.success("Citation inserted");
   }, [project, id]);
 
   const handleSelectPdf = useCallback((pdfId: string) => { db.projects.update(id, { activePdfId: pdfId, updatedAt: Date.now() }); setShowLibrary(false); }, [id]);
