@@ -158,20 +158,33 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setEditingName(false);
   };
 
-  const handleShare = useCallback(() => {
+  const handleShare = useCallback(async () => {
     if (!project) return;
-    const payload = {
-      name: project.name,
-      content: project.content,
-      citations: project.citations || [],
-    };
-    const b64 = btoa(JSON.stringify(payload));
-    const url = `${window.location.origin}/import?data=${b64}`;
-    navigator.clipboard.writeText(url).then(() => {
-      toast.success("Share link copied to clipboard!");
-    }).catch(() => {
-      toast.error("Failed to copy link");
-    });
+    try {
+      const payload = {
+        name: project.name,
+        content: project.content || "",
+        citations: project.citations || [],
+      };
+      const json = JSON.stringify(payload);
+      // Use TextEncoder to handle Unicode safely
+      const bytes = new TextEncoder().encode(json);
+      const binary = Array.from(bytes, (b) => String.fromCharCode(b)).join("");
+      const b64 = btoa(binary);
+
+      // If URL would be too long, copy just the JSON to clipboard instead
+      const url = `${window.location.origin}/import?data=${encodeURIComponent(b64)}`;
+      if (url.length > 8000) {
+        // Too large for URL — copy as JSON file content
+        await navigator.clipboard.writeText(json);
+        toast.success("Project data copied to clipboard (too large for URL)");
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Share link copied to clipboard!");
+      }
+    } catch (err) {
+      toast.error("Failed to share — try exporting to Word instead");
+    }
   }, [project]);
 
   // Loading

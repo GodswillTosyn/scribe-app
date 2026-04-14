@@ -21,7 +21,11 @@ function ImportHandler() {
     imported.current = true;
 
     try {
-      const json = JSON.parse(atob(data));
+      const decoded = decodeURIComponent(data);
+      const binary = atob(decoded);
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      const jsonStr = new TextDecoder().decode(bytes);
+      const json = JSON.parse(jsonStr);
       const id = crypto.randomUUID();
       const now = Date.now();
       db.projects.add({
