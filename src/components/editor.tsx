@@ -50,6 +50,48 @@ function Grp({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+/* ─── Table grid picker ─── */
+function TablePicker({ onInsert }: { onInsert: (rows: number, cols: number) => void }) {
+  const [open, setOpen] = useState(false);
+  const [hover, setHover] = useState({ r: 0, c: 0 });
+  const MAX = 8;
+
+  return (
+    <div className="relative">
+      <Btn onClick={() => setOpen(!open)} isActive={open} title="Insert Table">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
+      </Btn>
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 p-2 rounded-xl z-50"
+          style={{ background: "var(--panel-bg)", border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,0.12)" }}
+          onMouseLeave={() => setHover({ r: 0, c: 0 })}
+        >
+          <div className="text-[10px] font-medium mb-1.5 text-center" style={{ color: "var(--muted)" }}>
+            {hover.r > 0 ? `${hover.r} × ${hover.c}` : "Select size"}
+          </div>
+          <div className="grid gap-[3px]" style={{ gridTemplateColumns: `repeat(${MAX}, 1fr)` }}>
+            {Array.from({ length: MAX * MAX }, (_, i) => {
+              const r = Math.floor(i / MAX) + 1;
+              const c = (i % MAX) + 1;
+              const active = r <= hover.r && c <= hover.c;
+              return (
+                <div
+                  key={i}
+                  className="w-[14px] h-[14px] rounded-[2px] cursor-pointer transition-colors"
+                  style={{ background: active ? "var(--purple)" : "var(--hover)", opacity: active ? 1 : 0.5 }}
+                  onMouseEnter={() => setHover({ r, c })}
+                  onClick={() => { onInsert(r, c); setOpen(false); setHover({ r: 0, c: 0 }); }}
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", "Courier New", "Comic Sans MS"];
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
@@ -160,9 +202,7 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive("codeBlock")} title="Code Block">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
         </Btn>
-        <Btn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert Table">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
-        </Btn>
+        <TablePicker onInsert={(rows, cols) => editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()} />
       </Grp>
       <Sep />
       {/* Undo/Redo */}
