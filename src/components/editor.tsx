@@ -261,11 +261,18 @@ function InspectorPanel({
 }) {
   const [tab, setTab] = useState<"citations" | "ai" | "arxiv">("citations");
 
-  // Auto-switch to arXiv tab when "Find Related" is triggered
+  // Auto-switch tabs from external events
   useEffect(() => {
-    const handler = () => setTab("arxiv");
-    window.addEventListener("scribe:arxiv-search", handler);
-    return () => window.removeEventListener("scribe:arxiv-search", handler);
+    const handleArxiv = () => setTab("arxiv");
+    const handleAi = () => setTab("ai");
+    window.addEventListener("scribe:arxiv-search", handleArxiv);
+    window.addEventListener("scribe:open-ai-tab", handleAi);
+    window.addEventListener("scribe:ai-ask", handleAi);
+    return () => {
+      window.removeEventListener("scribe:arxiv-search", handleArxiv);
+      window.removeEventListener("scribe:open-ai-tab", handleAi);
+      window.removeEventListener("scribe:ai-ask", handleAi);
+    };
   }, []);
 
   if (!open) {
@@ -568,11 +575,17 @@ export default function Editor({
     return () => window.removeEventListener("scribe:cite", handleCite);
   }, []);
 
-  // Listen for arXiv search trigger — open panel to arXiv tab
+  // Open panel when AI or arXiv is triggered externally
   useEffect(() => {
     const handler = () => { setPanelOpen(true); };
     window.addEventListener("scribe:arxiv-search", handler);
-    return () => window.removeEventListener("scribe:arxiv-search", handler);
+    window.addEventListener("scribe:open-ai-tab", handler);
+    window.addEventListener("scribe:ai-ask", handler);
+    return () => {
+      window.removeEventListener("scribe:arxiv-search", handler);
+      window.removeEventListener("scribe:open-ai-tab", handler);
+      window.removeEventListener("scribe:ai-ask", handler);
+    };
   }, []);
 
   // Listen for snapshot events from PDF viewer

@@ -362,42 +362,46 @@ export default function PdfViewer({
         )}
       </div>
 
-      {/* Selection mini-menu: Cite + AI actions */}
+      {/* Selection context menu — vertical dropdown */}
       {popover && !snapshotMode && (
         <div ref={popoverBtnRef} className="fixed z-[9999]" style={{ left: popover.x, top: popover.y, transform: "translate(-50%, -100%)" }}>
-          <div className="flex items-center gap-0.5 rounded-xl p-1" style={{ background: "var(--panel-bg)", border: "1px solid var(--border)", boxShadow: "0 8px 24px rgba(0,0,0,0.12), 0 2px 8px rgba(109,40,217,0.08)" }}>
-            <button onClick={handleCite} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap"
-              style={{ background: "var(--purple)", color: "#fff" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-soft)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple)")}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
+          <div className="rounded-2xl py-1.5 w-[160px]" style={{ background: "var(--panel-bg)", border: "1px solid var(--border)", boxShadow: "0 12px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(109,40,217,0.06)" }}>
+            {/* Primary action */}
+            <button onClick={handleCite} className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-semibold transition-colors"
+              style={{ color: "var(--purple)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-bg)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
               Cite
             </button>
-            <button onClick={handleHighlight} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap"
-              style={{ color: "var(--muted)" }}
+            <button onClick={handleHighlight} className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors"
+              style={{ color: "var(--foreground)" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <span className="text-[10px] px-0.5" style={{ background: "rgba(250,204,21,0.4)", borderRadius: "2px" }}>A</span>
+              <span className="w-[13px] h-[13px] flex items-center justify-center text-[10px] font-bold rounded-sm" style={{ background: "rgba(250,204,21,0.5)" }}>A</span>
               Highlight
             </button>
-            <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:ai-ask", { detail: { prompt: `Summarize this text concisely:\n\n"${t}"`, text: t } })); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" style={{ color: "var(--muted)" }}
+            {/* Divider */}
+            <div className="my-1 mx-3" style={{ borderTop: "1px solid var(--border)" }} />
+            {/* AI actions */}
+            <div className="px-3 py-1"><span className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)", opacity: 0.5 }}>AI</span></div>
+            <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:ai-ask", { detail: { prompt: `Summarize this text concisely:\n\n"${t}"`, text: t } })); window.dispatchEvent(new CustomEvent("scribe:open-ai-tab")); }}
+              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors" style={{ color: "var(--foreground)" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="url(#pmg1)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><defs><linearGradient id="pmg1" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#3B82F6" /></linearGradient></defs><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
               Summarize
             </button>
-            <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:ai-ask", { detail: { prompt: `Explain this in simple terms:\n\n"${t}"`, text: t } })); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" style={{ color: "var(--muted)" }}
+            <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:ai-ask", { detail: { prompt: `Explain this in simple terms:\n\n"${t}"`, text: t } })); window.dispatchEvent(new CustomEvent("scribe:open-ai-tab")); }}
+              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors" style={{ color: "var(--foreground)" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="url(#pmg2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><defs><linearGradient id="pmg2" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#3B82F6" /></linearGradient></defs><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
               Explain
             </button>
             <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:arxiv-search", { detail: t })); }}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" style={{ color: "var(--muted)" }}
+              className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors" style={{ color: "var(--foreground)" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
               Find Related
             </button>
           </div>
-          <div className="w-2.5 h-2.5 rotate-45 mx-auto -mt-[5px]" style={{ background: "var(--panel-bg)", borderRight: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }} />
         </div>
       )}
     </div>
