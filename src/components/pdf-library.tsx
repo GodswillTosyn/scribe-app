@@ -99,9 +99,20 @@ export default function PdfLibrary({
     setDoiLoading(true);
     try {
       const text = await extractTextFromPdf(pdfFiles[0].file);
-      const doiMatch = text.match(/10\.\d{4,}\/[^\s]+/);
-      if (doiMatch) {
-        const doi = doiMatch[0].replace(/[.,;)\]]+$/, "");
+      // Try multiple DOI patterns: bare DOI, doi:xxx, DOI xxx, https://doi.org/xxx
+      const patterns = [
+        /(?:doi[:\s]*|https?:\/\/(?:dx\.)?doi\.org\/)(10\.\d{4,}\/[^\s,;)}\]]+)/i,
+        /(10\.\d{4,}\/[^\s,;)}\]]+)/,
+      ];
+      let doi = "";
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) {
+          doi = (match[1] || match[0]).replace(/[.,;)\]]+$/, "");
+          break;
+        }
+      }
+      if (doi) {
         const res = await fetch(`/api/doi?doi=${encodeURIComponent(doi)}`);
         if (res.ok) {
           const data = await res.json();
