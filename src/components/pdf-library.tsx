@@ -1,7 +1,25 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { pdfjs } from "react-pdf";
 import type { PdfFile } from "@/lib/db";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+/** Extract text from first 3 pages of a PDF file to find DOI */
+async function extractTextFromPdf(file: File): Promise<string> {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise;
+  const maxPages = Math.min(pdf.numPages, 3);
+  const texts: string[] = [];
+  for (let i = 1; i <= maxPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map((item) => ("str" in item ? item.str : "")).join(" ");
+    texts.push(pageText);
+  }
+  return texts.join("\n");
+}
 
 interface PdfLibraryProps {
   pdfs: PdfFile[];
@@ -77,10 +95,10 @@ export default function PdfLibrary({
     setPendingYear("");
     e.target.value = "";
 
-    // Try DOI auto-detection from the first file
+    // Try DOI auto-detection from the first file using pdfjs
     setDoiLoading(true);
     try {
-      const text = await pdfFiles[0].file.text();
+      const text = await extractTextFromPdf(pdfFiles[0].file);
       const doiMatch = text.match(/10\.\d{4,}\/[^\s]+/);
       if (doiMatch) {
         const doi = doiMatch[0].replace(/[.,;)\]]+$/, "");
