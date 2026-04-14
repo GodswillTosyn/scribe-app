@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { motion, AnimatePresence } from "framer-motion";
 import "react-pdf/dist/Page/TextLayer.css";
+import PdfSearch from "./pdf-search";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -286,6 +287,7 @@ export default function PdfViewer({
         onMouseMove={snapshotMode ? moveSnap : undefined}
         onMouseUp={snapshotMode ? endSnap : undefined}
       >
+        <PdfSearch containerRef={containerRef} />
         <AnimatePresence mode="wait">
           <motion.div
             key={pdfKey}

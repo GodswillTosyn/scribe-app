@@ -224,6 +224,102 @@ body {
   animation: save-pulse 1s ease-in-out;
 }
 
+/* Tables in editor */
+.tiptap table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tiptap th,
+.tiptap td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+  vertical-align: top;
+  min-width: 80px;
+}
+
+.tiptap th {
+  background: var(--surface);
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.tiptap td.selectedCell,
+.tiptap th.selectedCell {
+  background: var(--purple-bg);
+}
+
+/* Drag & drop zone */
+.drop-zone-active {
+  background: var(--purple-bg) !important;
+  border-color: var(--purple) !important;
+  outline: 2px dashed var(--purple);
+  outline-offset: -2px;
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--hover) 25%, var(--surface) 50%, var(--hover) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* Focus mode */
+.focus-mode .editor-paginated-wrapper {
+  max-width: 680px;
+}
+
+/* Resizable panel handle */
+.resize-handle {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.resize-handle:hover,
+.resize-handle.active {
+  background: var(--purple);
+}
+
+.resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  right: -4px;
+}
+
+/* Word count goal progress */
+.goal-bar {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--hover);
+  overflow: hidden;
+}
+
+.goal-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--purple);
+  transition: width 0.3s ease;
+}
+
 .tiptap p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;

@@ -10,7 +10,7 @@ import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
-// CitationNode kept for legacy content parsing
+import { TableKit } from "@tiptap/extension-table";
 import { CitationNode } from "./citation-node";
 import Image from "@tiptap/extension-image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ import type { CitationPayload } from "./pdf-viewer";
 import type { ChatMessage, CitationRecord } from "@/lib/db";
 import { exportToWord, exportToPdf } from "@/lib/export";
 import AiChat from "./ai-chat";
+import toast from "react-hot-toast";
 
 /* ─── Small reusable pieces ─── */
 function Btn({ onClick, isActive, children, title }: { onClick: () => void; isActive?: boolean; children: React.ReactNode; title: string }) {
@@ -44,7 +45,7 @@ const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", 
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -150,6 +151,9 @@ function Toolbar({ editor, onExportWord, onExportPdf }: { editor: TiptapEditor; 
         <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive("codeBlock")} title="Code Block">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
         </Btn>
+        <Btn onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="Insert Table">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" /></svg>
+        </Btn>
       </Grp>
       <Sep />
       {/* Undo/Redo */}
@@ -159,6 +163,15 @@ function Toolbar({ editor, onExportWord, onExportPdf }: { editor: TiptapEditor; 
         </Btn>
         <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" /></svg>
+        </Btn>
+      </Grp>
+      <Sep />
+      {/* References */}
+      <Grp label="Refs">
+        <Btn onClick={onGenerateRefs} title="Generate Reference List">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+          </svg>
         </Btn>
       </Grp>
       <Sep />
@@ -338,6 +351,7 @@ export default function Editor({
       Superscript,
       CitationNode,
       Image.configure({ inline: false, allowBase64: true }),
+      TableKit,
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
@@ -478,6 +492,32 @@ export default function Editor({
     exportToPdf(editor.getHTML(), projectName);
   }, [editor, projectName]);
 
+  // Generate APA reference list from citations
+  const generateReferenceList = useCallback(() => {
+    if (!editor || citations.length === 0) return;
+    const refs = citations.map((c, i) => {
+      const authors = c.authors || c.filename.replace(/\.pdf$/i, "");
+      const year = c.year || "n.d.";
+      return `[${i + 1}] ${authors} (${year}). <em>${c.filename.replace(/\.pdf$/i, "")}</em>. p.&nbsp;${c.page}.`;
+    });
+    // Deduplicate by author+year+filename
+    const unique = [...new Set(refs)];
+    const html = `<h2>References</h2><hr>${unique.map((r) => `<p>${r}</p>`).join("")}`;
+    queueMicrotask(() => {
+      editor.chain().focus("end").insertContent(html).run();
+    });
+    toast.success("Reference list generated");
+  }, [editor, citations]);
+
+  // Listen for export commands from command palette
+  useEffect(() => {
+    const onWord = () => handleExportWord();
+    const onPdf = () => handleExportPdf();
+    window.addEventListener("scribe:export-word", onWord);
+    window.addEventListener("scribe:export-pdf", onPdf);
+    return () => { window.removeEventListener("scribe:export-word", onWord); window.removeEventListener("scribe:export-pdf", onPdf); };
+  }, [handleExportWord, handleExportPdf]);
+
   // Page tracking
   const PAGE_H = 1056;
   const PAGE_GAP = 32;
@@ -534,7 +574,7 @@ export default function Editor({
   return (
     <div className="flex h-full">
       <div className="flex flex-col flex-1 min-w-0">
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} />
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} />
 
         {/* Paginated editor */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>

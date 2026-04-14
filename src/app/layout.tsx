@@ -4,6 +4,7 @@ import "@fontsource/space-grotesk/500.css";
 import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "./globals.css";
+import ToastProvider from "@/components/toast-provider";
 
 export const metadata: Metadata = {
   title: "Scribe | AI-Powered Research Environment",
@@ -30,7 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="h-screen overflow-hidden">{children}</body>
+      <body className="h-screen overflow-hidden">
+        {children}
+        <ToastProvider />
+      </body>
     </html>
   );
 }
