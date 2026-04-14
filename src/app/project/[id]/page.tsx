@@ -14,6 +14,7 @@ const Editor = dynamic(() => import("@/components/editor"), { ssr: false });
 const ThemeToggle = dynamic(() => import("@/components/theme-toggle"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/command-palette"), { ssr: false });
 const KeyboardShortcuts = dynamic(() => import("@/components/keyboard-shortcuts"), { ssr: false });
+const Onboarding = dynamic(() => import("@/components/onboarding"), { ssr: false });
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -157,6 +158,22 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     setEditingName(false);
   };
 
+  const handleShare = useCallback(() => {
+    if (!project) return;
+    const payload = {
+      name: project.name,
+      content: project.content,
+      citations: project.citations || [],
+    };
+    const b64 = btoa(JSON.stringify(payload));
+    const url = `${window.location.origin}/import?data=${b64}`;
+    navigator.clipboard.writeText(url).then(() => {
+      toast.success("Share link copied to clipboard!");
+    }).catch(() => {
+      toast.error("Failed to copy link");
+    });
+  }, [project]);
+
   // Loading
   if (project === undefined) {
     return (
@@ -228,6 +245,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
               Sources
             </button>
           )}
+          <button onClick={handleShare} className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors"
+            style={{ color: "var(--muted)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="Share project">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+            Share
+          </button>
           <ThemeToggle />
         </div>
       </nav>
@@ -235,7 +261,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       <div ref={containerRef} className="flex flex-1 min-h-0" onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}>
         {!focusMode && (
           <>
-            <div className={`flex flex-col shrink-0 ${draggingFile ? "drop-zone-active" : ""}`}
+            <div className={`pdf-panel-container flex flex-col shrink-0 ${draggingFile ? "drop-zone-active" : ""}`}
               style={{ width: `${panelWidth}%`, borderRight: "1px solid var(--border)", background: "var(--surface)", transition: isResizing ? "none" : "width 0.2s ease" }}>
               {showLibrary ? (
                 <PdfLibrary pdfs={pdfs} activePdfId={activePdfId} onSelect={handleSelectPdf} onAdd={handleAddPdf} onRemove={handleRemovePdfs} onUpdateMeta={handleUpdatePdfMeta} />
@@ -269,6 +295,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
       <CommandPalette commands={commands} />
       <KeyboardShortcuts />
+      <Onboarding />
     </div>
   );
 }

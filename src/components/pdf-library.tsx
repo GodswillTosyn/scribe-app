@@ -121,6 +121,19 @@ export default function PdfLibrary({
           Add
           <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
         </label>
+        <div className="relative group">
+          <button
+            disabled
+            className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium cursor-not-allowed opacity-50"
+            style={{ background: "var(--hover)", color: "var(--muted)" }}
+          >
+            DOCX
+          </button>
+          <div className="absolute bottom-full right-0 mb-1 px-2 py-1 rounded text-[9px] whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+            style={{ background: "var(--foreground)", color: "var(--background)" }}>
+            Coming soon
+          </div>
+        </div>
       </div>
 
       {/* Cards */}

@@ -20,6 +20,7 @@ export interface CitationPayload {
 
 interface PopoverState { x: number; y: number; payload: CitationPayload }
 interface SnapshotBox { startX: number; startY: number; endX: number; endY: number; pageNum: number }
+interface PdfHighlight { page: number; text: string }
 
 function getPageNumber(node: Node): number {
   let el: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
@@ -48,6 +49,7 @@ export default function PdfViewer({
   const [snapBox, setSnapBox] = useState<SnapshotBox | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [pdfKey, setPdfKey] = useState(0); // for fade-in on new PDF
+  const [highlights, setHighlights] = useState<PdfHighlight[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverBtnRef = useRef<HTMLDivElement>(null);
 
@@ -150,6 +152,37 @@ export default function PdfViewer({
     setPopover(null);
     window.getSelection()?.removeAllRanges();
   }, [popover, onCite]);
+
+  const handleHighlight = useCallback(() => {
+    if (!popover) return;
+    const hl: PdfHighlight = { page: popover.payload.page, text: popover.payload.text };
+    setHighlights((prev) => [...prev, hl]);
+    setPopover(null);
+    window.getSelection()?.removeAllRanges();
+  }, [popover]);
+
+  // Apply highlights to textLayer spans
+  useEffect(() => {
+    if (!containerRef.current || highlights.length === 0) return;
+    // Clear existing highlights
+    containerRef.current.querySelectorAll(".scribe-highlight").forEach((el) => {
+      (el as HTMLElement).style.background = "";
+      el.classList.remove("scribe-highlight");
+    });
+    // Apply
+    for (const hl of highlights) {
+      const pageEl = containerRef.current.querySelector(`[data-page-number="${hl.page}"]`);
+      if (!pageEl) continue;
+      const spans = pageEl.querySelectorAll(".textLayer span");
+      for (const span of spans) {
+        const text = span.textContent || "";
+        if (text.length > 2 && hl.text.includes(text.trim())) {
+          (span as HTMLElement).style.background = "rgba(250,204,21,0.4)";
+          span.classList.add("scribe-highlight");
+        }
+      }
+    }
+  }, [highlights, numPages]);
 
   // ── Snapshot drawing ──
   const startSnap = (e: React.MouseEvent) => {
@@ -320,6 +353,12 @@ export default function PdfViewer({
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-soft)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple)")}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
               Cite
+            </button>
+            <button onClick={handleHighlight} className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap"
+              style={{ color: "var(--muted)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              <span className="text-[10px] px-0.5" style={{ background: "rgba(250,204,21,0.4)", borderRadius: "2px" }}>A</span>
+              Highlight
             </button>
             <button onClick={() => { const t = popover.payload.text; setPopover(null); window.getSelection()?.removeAllRanges(); window.dispatchEvent(new CustomEvent("scribe:ai-ask", { detail: { prompt: `Summarize this text concisely:\n\n"${t}"`, text: t } })); }}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap" style={{ color: "var(--muted)" }}

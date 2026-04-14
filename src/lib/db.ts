@@ -16,6 +16,12 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export interface VersionSnapshot {
+  id: string;
+  content: string;
+  timestamp: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -24,6 +30,7 @@ export interface Project {
   activePdfId: string;
   citations: CitationRecord[];
   chatHistory: ChatMessage[];
+  versions: VersionSnapshot[];
   createdAt: number;
   updatedAt: number;
 }
@@ -43,6 +50,10 @@ const db = new Dexie("ScribeDB") as Dexie & {
 };
 
 db.version(3).stores({
+  projects: "id, name, updatedAt",
+});
+
+db.version(4).stores({
   projects: "id, name, updatedAt",
 });
 

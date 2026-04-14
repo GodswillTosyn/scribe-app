@@ -15,10 +15,19 @@ import { CitationNode } from "./citation-node";
 import Image from "@tiptap/extension-image";
 import { motion, AnimatePresence } from "framer-motion";
 import type { CitationPayload } from "./pdf-viewer";
-import type { ChatMessage, CitationRecord } from "@/lib/db";
+import type { ChatMessage, CitationRecord, VersionSnapshot } from "@/lib/db";
+import { db } from "@/lib/db";
 import { exportToWord, exportToPdf } from "@/lib/export";
 import AiChat from "./ai-chat";
+import VersionHistory from "./version-history";
 import toast from "react-hot-toast";
+
+/* ─── Tab types ─── */
+interface EditorTab {
+  id: string;
+  label: string;
+  content: string;
+}
 
 /* ─── Small reusable pieces ─── */
 function Btn({ onClick, isActive, children, title }: { onClick: () => void; isActive?: boolean; children: React.ReactNode; title: string }) {
@@ -45,7 +54,7 @@ const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", 
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -54,7 +63,7 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs }: { editor
   const currentSize = (editor.getAttributes("textStyle").fontSize as string) || "15px";
 
   return (
-    <div className="flex items-start gap-0.5 px-2 py-1.5 border-b shrink-0 flex-wrap" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
+    <div className="flex items-start gap-0.5 px-2 py-1.5 border-b shrink-0 flex-wrap editor-toolbar-mobile" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
       {/* Font family */}
       <Grp label="Font">
         <div className="relative">
@@ -163,6 +172,9 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs }: { editor
         </Btn>
         <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" /></svg>
+        </Btn>
+        <Btn onClick={onShowHistory} title="Version History">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
         </Btn>
       </Grp>
       <Sep />
@@ -335,8 +347,88 @@ export default function Editor({
   const contentChangeRef = useRef(onContentChange);
   const citationsChangeRef = useRef(onCitationsChange);
   const initializedRef = useRef(false);
+  const swappingRef = useRef(false);
   contentChangeRef.current = onContentChange;
   citationsChangeRef.current = onCitationsChange;
+
+  // ─── Tabs ───
+  const [tabs, setTabs] = useState<EditorTab[]>([
+    { id: "main", label: "Untitled 1", content: initialContent },
+  ]);
+  const [activeTabId, setActiveTabId] = useState("main");
+  const tabCounter = useRef(1);
+
+  const addTab = useCallback(() => {
+    tabCounter.current += 1;
+    const newTab: EditorTab = { id: crypto.randomUUID(), label: `Untitled ${tabCounter.current}`, content: "" };
+    setTabs((prev) => [...prev, newTab]);
+    // Save current tab content
+    const ed = editorRef.current;
+    if (ed) {
+      const html = ed.getHTML();
+      setTabs((prev) => prev.map((t) => t.id === activeTabId ? { ...t, content: html } : t));
+    }
+    setActiveTabId(newTab.id);
+    if (ed) {
+      swappingRef.current = true;
+      queueMicrotask(() => {
+        ed.commands.setContent("");
+        swappingRef.current = false;
+      });
+    }
+  }, [activeTabId]);
+
+  const closeTab = useCallback((tabId: string) => {
+    setTabs((prev) => {
+      if (prev.length <= 1) return prev;
+      const idx = prev.findIndex((t) => t.id === tabId);
+      const next = prev.filter((t) => t.id !== tabId);
+      if (tabId === activeTabId) {
+        const newActive = next[Math.min(idx, next.length - 1)];
+        setActiveTabId(newActive.id);
+        const ed = editorRef.current;
+        if (ed) {
+          swappingRef.current = true;
+          queueMicrotask(() => {
+            ed.commands.setContent(newActive.content);
+            swappingRef.current = false;
+          });
+        }
+      }
+      return next;
+    });
+  }, [activeTabId]);
+
+  const switchTab = useCallback((tabId: string) => {
+    if (tabId === activeTabId) return;
+    const ed = editorRef.current;
+    if (ed) {
+      const html = ed.getHTML();
+      setTabs((prev) => prev.map((t) => t.id === activeTabId ? { ...t, content: html } : t));
+    }
+    setActiveTabId(tabId);
+    const target = tabs.find((t) => t.id === tabId);
+    if (ed && target) {
+      swappingRef.current = true;
+      queueMicrotask(() => {
+        ed.commands.setContent(target.content);
+        swappingRef.current = false;
+      });
+    }
+  }, [activeTabId, tabs]);
+
+  // ─── Version History ───
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
+  const lastSavedContentRef = useRef(initialContent);
+
+  // ─── Word Goal ───
+  const [wordGoal, setWordGoal] = useState(0);
+
+  // Load word goal from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem(`scribe-word-goal-${projectId}`);
+    if (stored) setWordGoal(parseInt(stored, 10) || 0);
+  }, [projectId]);
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -355,7 +447,7 @@ export default function Editor({
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
-      if (!initializedRef.current) return;
+      if (!initializedRef.current || swappingRef.current) return;
       contentChangeRef.current(e.getHTML());
     },
     editorProps: { attributes: { class: "tiptap" } },
@@ -466,6 +558,38 @@ export default function Editor({
 
   const readingTime = Math.max(1, Math.ceil(wordCount / 200));
 
+  // ─── Version auto-save every 30s ───
+  useEffect(() => {
+    if (!editor) return;
+    const interval = setInterval(() => {
+      const html = editor.getHTML();
+      if (html === lastSavedContentRef.current) return;
+      lastSavedContentRef.current = html;
+      const snapshot: VersionSnapshot = { id: crypto.randomUUID(), content: html, timestamp: Date.now() };
+      db.projects.get(projectId).then((project) => {
+        if (!project) return;
+        const versions = [...(project.versions || []), snapshot];
+        // FIFO: max 50
+        while (versions.length > 50) versions.shift();
+        db.projects.update(projectId, { versions });
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [editor, projectId]);
+
+  const handleRestoreVersion = useCallback((content: string) => {
+    if (!editor) return;
+    swappingRef.current = true;
+    queueMicrotask(() => {
+      editor.commands.setContent(content);
+      swappingRef.current = false;
+      contentChangeRef.current(content);
+      lastSavedContentRef.current = content;
+    });
+    setShowVersionHistory(false);
+    toast.success("Version restored");
+  }, [editor]);
+
   // Click citation in panel → navigate to PDF location
   const goToCitation = useCallback((c: CitationPayload) => {
     window.dispatchEvent(
@@ -574,7 +698,40 @@ export default function Editor({
   return (
     <div className="flex h-full">
       <div className="flex flex-col flex-1 min-w-0">
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} />
+        {/* Tab bar */}
+        <div className="flex items-center shrink-0 border-b" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => switchTab(tab.id)}
+              className="flex items-center gap-1 px-3 h-8 text-[11px] font-medium border-r transition-colors relative"
+              style={{
+                borderColor: "var(--border)",
+                background: tab.id === activeTabId ? "var(--tab-active)" : "var(--tab-inactive)",
+                color: tab.id === activeTabId ? "var(--foreground)" : "var(--muted)",
+              }}
+            >
+              {tab.label}
+              {tabs.length > 1 && (
+                <span
+                  onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
+                  className="ml-1 flex items-center justify-center w-4 h-4 rounded transition-colors"
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                >
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </span>
+              )}
+              {tab.id === activeTabId && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "var(--purple)" }} />}
+            </button>
+          ))}
+          <button onClick={addTab} className="flex items-center justify-center w-8 h-8 text-[11px] transition-colors" style={{ color: "var(--muted)" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")} title="New tab">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          </button>
+        </div>
+
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} />
 
         {/* Paginated editor */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>
@@ -634,18 +791,45 @@ export default function Editor({
           <div className="w-px h-3" style={{ background: "var(--border)" }} />
 
           {/* Char count */}
-          <div className="status-bar-item">
+          <div className="status-bar-item hide-mobile">
             <span>{charCount.toLocaleString()} chars</span>
           </div>
 
-          <div className="w-px h-3" style={{ background: "var(--border)" }} />
+          <div className="w-px h-3 hide-mobile" style={{ background: "var(--border)" }} />
 
           {/* Reading time */}
-          <div className="status-bar-item">
+          <div className="status-bar-item hide-mobile">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
             </svg>
             <span>{readingTime} min read</span>
+          </div>
+
+          {/* Word goal */}
+          <div className="w-px h-3" style={{ background: "var(--border)" }} />
+          <div className="status-bar-item" style={{ gap: "6px" }}>
+            <span>Goal:</span>
+            <input
+              type="number"
+              min={0}
+              value={wordGoal || ""}
+              onChange={(e) => {
+                const v = parseInt(e.target.value, 10) || 0;
+                setWordGoal(v);
+                localStorage.setItem(`scribe-word-goal-${projectId}`, String(v));
+              }}
+              placeholder="0"
+              className="w-12 text-[10px] bg-transparent border rounded px-1 outline-none tabular-nums"
+              style={{ borderColor: "var(--border)", color: "var(--foreground)", height: "18px" }}
+            />
+            {wordGoal > 0 && (
+              <>
+                <div className="goal-bar" style={{ width: "60px" }}>
+                  <div className="goal-bar-fill" style={{ width: `${Math.min(100, (wordCount / wordGoal) * 100)}%` }} />
+                </div>
+                <span>{Math.min(100, Math.round((wordCount / wordGoal) * 100))}%</span>
+              </>
+            )}
           </div>
 
           <div className="flex-1" />
@@ -665,6 +849,22 @@ export default function Editor({
         onClickCitation={goToCitation} onDelete={deleteCitation}
         chatHistory={initialChatHistory} onUpdateChat={onUpdateChat} getContext={getContext}
       />
+
+      {/* Version History Modal */}
+      {showVersionHistory && (
+        <VersionHistoryWrapper projectId={projectId} onRestore={handleRestoreVersion} onClose={() => setShowVersionHistory(false)} />
+      )}
     </div>
   );
+}
+
+/* ─── Version History Wrapper (reads versions from DB) ─── */
+function VersionHistoryWrapper({ projectId, onRestore, onClose }: { projectId: string; onRestore: (content: string) => void; onClose: () => void }) {
+  const [versions, setVersions] = useState<VersionSnapshot[]>([]);
+  useEffect(() => {
+    db.projects.get(projectId).then((p) => {
+      if (p) setVersions(p.versions || []);
+    });
+  }, [projectId]);
+  return <VersionHistory versions={versions} onRestore={onRestore} onClose={onClose} />;
 }

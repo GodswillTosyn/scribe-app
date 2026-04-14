@@ -510,3 +510,55 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* ─── Onboarding pulse ─── */
+@keyframes onboarding-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(109,40,217,0.12); }
+  50% { box-shadow: 0 4px 20px rgba(109,40,217,0.25); }
+}
+
+/* ─── Real page breaks ─── */
+.editor-paginated-wrapper .tiptap p,
+.editor-paginated-wrapper .tiptap h1,
+.editor-paginated-wrapper .tiptap h2,
+.editor-paginated-wrapper .tiptap h3,
+.editor-paginated-wrapper .tiptap li,
+.editor-paginated-wrapper .tiptap blockquote,
+.editor-paginated-wrapper .tiptap pre,
+.editor-paginated-wrapper .tiptap table {
+  break-inside: avoid;
+}
+
+/* ─── Mobile responsiveness ─── */
+@media (max-width: 768px) {
+  /* Hide PDF panel, make editor full width */
+  .pdf-panel-container {
+    display: none !important;
+  }
+  .resize-handle {
+    display: none !important;
+  }
+
+  /* Toolbar: scrollable horizontally */
+  .editor-toolbar-mobile {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Status bar: wrap or hide non-essential items */
+  .status-bar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: 28px;
+    padding: 4px 12px;
+  }
+  .status-bar-item.hide-mobile {
+    display: none;
+  }
+
+  /* Landing page cards single column */
+  .landing-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
