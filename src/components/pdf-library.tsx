@@ -27,6 +27,7 @@ export default function PdfLibrary({
   const [pendingFiles, setPendingFiles] = useState<{ file: File; name: string }[]>([]);
   const [pendingAuthors, setPendingAuthors] = useState("");
   const [pendingYear, setPendingYear] = useState("");
+  const [doiLoading, setDoiLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const emptyFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +60,7 @@ export default function PdfLibrary({
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const pdfFiles: { file: File; name: string }[] = [];
@@ -69,12 +70,29 @@ export default function PdfLibrary({
         pdfFiles.push({ file: f, name: f.name });
       }
     }
-    if (pdfFiles.length > 0) {
-      setPendingFiles(pdfFiles);
-      setPendingAuthors("");
-      setPendingYear("");
-    }
+    if (pdfFiles.length === 0) return;
+
+    setPendingFiles(pdfFiles);
+    setPendingAuthors("");
+    setPendingYear("");
     e.target.value = "";
+
+    // Try DOI auto-detection from the first file
+    setDoiLoading(true);
+    try {
+      const text = await pdfFiles[0].file.text();
+      const doiMatch = text.match(/10\.\d{4,}\/[^\s]+/);
+      if (doiMatch) {
+        const doi = doiMatch[0].replace(/[.,;)\]]+$/, "");
+        const res = await fetch(`/api/doi?doi=${encodeURIComponent(doi)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authors) setPendingAuthors(data.authors);
+          if (data.year) setPendingYear(data.year);
+        }
+      }
+    } catch { /* best effort */ }
+    setDoiLoading(false);
   };
 
   const confirmAdd = () => {
@@ -292,6 +310,19 @@ export default function PdfLibrary({
                 <div className="text-[11px] truncate max-w-[220px]" style={{ color: "var(--muted)" }}>{pendingFiles.length === 1 ? pendingFiles[0].name : `${pendingFiles.length} files selected`}</div>
               </div>
             </div>
+
+            {doiLoading && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--purple-bg)", border: "1px solid var(--purple-border)" }}>
+                <div className="w-3 h-3 border-2 rounded-full animate-spin" style={{ borderColor: "var(--purple)", borderTopColor: "transparent" }} />
+                <span className="text-[10px] font-medium" style={{ color: "var(--purple)" }}>Detecting metadata from DOI...</span>
+              </div>
+            )}
+            {!doiLoading && pendingAuthors && (
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg" style={{ background: "var(--purple-bg)", border: "1px solid var(--purple-border)" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}><polyline points="20 6 9 17 4 12" /></svg>
+                <span className="text-[10px] font-medium" style={{ color: "var(--purple)" }}>Auto-filled from DOI</span>
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>
