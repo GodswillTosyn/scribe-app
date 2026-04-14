@@ -254,16 +254,14 @@ export default function PdfViewer({
 
   if (!pdfData) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4">
-        <div className="flex flex-col items-center gap-4 p-10 rounded-xl border border-dashed" style={{ borderColor: "var(--purple-border)" }}>
-          <div className="w-14 h-14 rounded-xl flex items-center justify-center" style={{ background: "var(--purple-bg)" }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}>
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
-            </svg>
-          </div>
-          <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>No PDF loaded</p>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>Use the + button above to add a PDF</p>
+      <div className="flex flex-col items-center justify-center h-full gap-3">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-2" style={{ background: "linear-gradient(135deg, var(--purple-bg), rgba(109,40,217,0.15))" }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="12" y1="18" x2="12" y2="12" /><line x1="9" y1="15" x2="15" y2="15" />
+          </svg>
         </div>
+        <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Drop a PDF here or use the + button above</p>
+        <p className="text-xs" style={{ color: "var(--muted)", opacity: 0.7 }}>Then select any text to cite it or ask AI about it</p>
       </div>
     );
   }

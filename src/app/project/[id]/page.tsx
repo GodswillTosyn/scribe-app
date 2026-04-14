@@ -16,6 +16,43 @@ const CommandPalette = dynamic(() => import("@/components/command-palette"), { s
 const KeyboardShortcuts = dynamic(() => import("@/components/keyboard-shortcuts"), { ssr: false });
 const Onboarding = dynamic(() => import("@/components/onboarding"), { ssr: false });
 
+function ProjectOnboardingOverlay({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div className="absolute inset-0 z-40 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.3)", backdropFilter: "blur(2px)" }}>
+      <div className="rounded-2xl p-8 max-w-md w-full mx-4" style={{ background: "var(--panel-bg)", border: "1px solid var(--border)", boxShadow: "0 16px 48px rgba(0,0,0,0.2)" }}>
+        <h3 className="text-lg font-bold mb-5" style={{ color: "var(--foreground)" }}>Get Started</h3>
+        <div className="flex flex-col gap-4 mb-6">
+          <div className="flex items-start gap-3">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 text-xs font-bold" style={{ background: "var(--purple)", color: "#fff" }}>1</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Upload a PDF</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>Use the Sources panel on the left to add your research papers.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 text-xs font-bold" style={{ background: "var(--purple)", color: "#fff" }}>2</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Select text and click Cite</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>Highlight any passage in the PDF to insert an APA citation.</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="flex items-center justify-center w-7 h-7 rounded-full shrink-0 text-xs font-bold" style={{ background: "var(--purple)", color: "#fff" }}>3</span>
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>Write your research notes here</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>The editor supports rich formatting, tables, and AI assistance.</p>
+            </div>
+          </div>
+        </div>
+        <button onClick={onDismiss} className="w-full py-2.5 rounded-xl text-sm font-semibold transition-colors" style={{ background: "var(--purple)", color: "#fff" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-soft)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple)")}>
+          Got it
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
@@ -29,6 +66,15 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
   const [draggingFile, setDraggingFile] = useState(false);
   const [mobilePdfOpen, setMobilePdfOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [showProjectOnboarding, setShowProjectOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flag = localStorage.getItem("scribe-project-onboarded");
+    if (flag !== "true" && project && project.pdfs.length === 0 && !project.content) {
+      setShowProjectOnboarding(true);
+    }
+  }, [project?.id]);
 
   useEffect(() => { if (project) setNameValue(project.name); }, [project?.name]);
 
@@ -309,11 +355,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
           </>
         )}
 
-        <div className="flex flex-col flex-1 min-w-0" style={{ background: "var(--panel-bg)" }}>
+        <div className="flex flex-col flex-1 min-w-0 relative" style={{ background: "var(--panel-bg)" }}>
           <Editor projectId={id} initialContent={project.content || ""} initialCitations={citations}
             onContentChange={handleContentChange}
             onCitationsChange={(cits) => { db.projects.update(id, { citations: cits, updatedAt: Date.now() }); }}
             projectName={project.name} chatHistory={chatHistory} onUpdateChat={handleUpdateChat} getContext={getContext} />
+          {showProjectOnboarding && (
+            <ProjectOnboardingOverlay onDismiss={() => { setShowProjectOnboarding(false); localStorage.setItem("scribe-project-onboarded", "true"); }} />
+          )}
         </div>
       </div>
 
