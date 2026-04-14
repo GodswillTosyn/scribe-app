@@ -148,55 +148,123 @@ export default function Home() {
           </div>
         )}
 
-        {/* ─── Projects (has projects) ─── */}
+        {/* ─── Projects dashboard ─── */}
         {hasProjects && (
-          <div className="max-w-3xl mx-auto px-6 py-8">
-            <div className="flex items-baseline justify-between mb-6">
-              <div>
-                <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>Projects</h1>
-                <p className="text-xs mt-0.5" style={{ color: "var(--muted)" }}>{projects.length} project{projects.length !== 1 ? "s" : ""}</p>
+          <div className="flex min-h-full">
+            {/* Sidebar */}
+            <div className="hidden md:flex flex-col shrink-0 w-56 border-r py-6 px-4" style={{ borderColor: "var(--border)", background: "var(--panel-bg)" }}>
+              <div className="flex items-center gap-2 px-2 py-2 rounded-lg mb-1" style={{ background: "var(--purple-bg)", color: "var(--purple)" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg>
+                <span className="text-xs font-semibold">All Projects</span>
+                <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--purple)", color: "#fff" }}>{projects.length}</span>
+              </div>
+              <button className="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium transition-colors" style={{ color: "var(--muted)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                Recent
+              </button>
+
+              <div className="mt-auto pt-4 border-t" style={{ borderColor: "var(--border)" }}>
+                <div className="px-2 py-2 rounded-lg text-[11px]" style={{ color: "var(--muted)", background: "var(--surface)" }}>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    <span className="font-medium">Stored locally</span>
+                  </div>
+                  <p style={{ opacity: 0.7, lineHeight: 1.4 }}>Your data never leaves this browser.</p>
+                </div>
               </div>
             </div>
 
-            <div className="landing-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map((p, i) => (
-                <motion.div
-                  key={p.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                  onClick={() => router.push(`/project/${p.id}`)}
-                  className="group relative rounded-2xl overflow-hidden cursor-pointer"
-                  style={{ background: "var(--panel-bg)", border: "1px solid var(--border)", boxShadow: "0 2px 8px rgba(0,0,0,0.04)", transition: "all 0.25s ease" }}
-                  onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(109,40,217,0.1)"; e.currentTarget.style.borderColor = "var(--purple-border)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,0,0,0.04)"; e.currentTarget.style.borderColor = "var(--border)"; }}
-                >
-                  {/* Gradient header — varies per card */}
-                  <div className="relative h-28 flex items-center justify-center" style={{
-                    background: `linear-gradient(${135 + i * 20}deg, rgba(109,40,217,${0.06 + (i % 3) * 0.03}) 0%, rgba(59,130,246,${0.04 + (i % 2) * 0.02}) 50%, var(--surface) 100%)`
-                  }}>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: "rgba(109,40,217,0.1)", backdropFilter: "blur(8px)" }}>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}>
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
-                      </svg>
-                    </div>
-                    <button className="absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-                      style={{ background: "rgba(239,68,68,0.08)", backdropFilter: "blur(8px)" }}
-                      onClick={(e) => deleteProject(p.id, e)}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.15)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
-                    </button>
-                    <div className="absolute bottom-2.5 left-2.5 flex gap-1">
-                      {p.pdfs.length > 0 && <span className="px-1.5 py-0.5 rounded text-[9px] font-medium" style={{ background: "rgba(109,40,217,0.1)", color: "var(--purple)", backdropFilter: "blur(4px)" }}>{p.pdfs.length} PDF{p.pdfs.length !== 1 ? "s" : ""}</span>}
-                      {p.citations.length > 0 && <span className="px-1.5 py-0.5 rounded text-[9px] font-medium" style={{ background: "rgba(109,40,217,0.1)", color: "var(--purple)", backdropFilter: "blur(4px)" }}>{p.citations.length} cite{p.citations.length !== 1 ? "s" : ""}</span>}
-                    </div>
-                  </div>
-                  <div className="p-3.5">
-                    <h3 className="text-[13px] font-semibold truncate mb-0.5" style={{ color: "var(--foreground)" }}>{p.name}</h3>
-                    <p className="text-[11px]" style={{ color: "var(--muted)" }}>{formatDate(p.updatedAt)}</p>
-                  </div>
-                </motion.div>
-              ))}
+            {/* Main content */}
+            <div className="flex-1 px-6 md:px-8 py-6">
+              <div className="flex items-baseline justify-between mb-5">
+                <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>All Projects</h1>
+                <span className="text-xs" style={{ color: "var(--muted)" }}>{projects.length} project{projects.length !== 1 ? "s" : ""}</span>
+              </div>
+
+              <div className="landing-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+                {projects.map((p, i) => {
+                  const wordCount = p.content ? p.content.replace(/<[^>]*>/g, "").split(/\s+/).filter(Boolean).length : 0;
+                  return (
+                    <motion.div
+                      key={p.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      onClick={() => router.push(`/project/${p.id}`)}
+                      className="group relative cursor-pointer"
+                      style={{ transition: "all 0.25s ease" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-3px)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; }}
+                    >
+                      {/* Folder tab */}
+                      <div className="flex items-end">
+                        <div className="h-5 w-24 rounded-t-lg" style={{ background: "rgba(109,40,217,0.08)" }} />
+                      </div>
+                      {/* Card body */}
+                      <div className="rounded-b-2xl rounded-tr-2xl overflow-hidden" style={{
+                        background: "rgba(109,40,217,0.04)",
+                        border: "1px solid rgba(109,40,217,0.1)",
+                        boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
+                        transition: "all 0.25s ease",
+                      }}
+                        ref={(el) => {
+                          if (!el) return;
+                          const parent = el.closest("[class*='group']");
+                          if (parent) {
+                            parent.addEventListener("mouseenter", () => { el.style.borderColor = "rgba(109,40,217,0.25)"; el.style.boxShadow = "0 8px 24px rgba(109,40,217,0.1)"; });
+                            parent.addEventListener("mouseleave", () => { el.style.borderColor = "rgba(109,40,217,0.1)"; el.style.boxShadow = "0 2px 8px rgba(0,0,0,0.03)"; });
+                          }
+                        }}
+                      >
+                        {/* Preview area — simulated document lines */}
+                        <div className="relative h-36 p-4 overflow-hidden" style={{ background: "var(--panel-bg)" }}>
+                          {/* Fake content preview lines */}
+                          <div className="flex flex-col gap-[6px]">
+                            <div className="h-2.5 rounded-full w-3/5" style={{ background: "var(--border)" }} />
+                            <div className="h-1.5 rounded-full w-full" style={{ background: "var(--hover)", opacity: 0.7 }} />
+                            <div className="h-1.5 rounded-full w-4/5" style={{ background: "var(--hover)", opacity: 0.7 }} />
+                            <div className="h-1.5 rounded-full w-full" style={{ background: "var(--hover)", opacity: 0.5 }} />
+                            <div className="h-1.5 rounded-full w-2/3" style={{ background: "var(--hover)", opacity: 0.5 }} />
+                            <div className="h-1.5 rounded-full w-full" style={{ background: "var(--hover)", opacity: 0.3 }} />
+                            <div className="h-1.5 rounded-full w-3/4" style={{ background: "var(--hover)", opacity: 0.3 }} />
+                            <div className="h-1.5 rounded-full w-1/2" style={{ background: "var(--hover)", opacity: 0.2 }} />
+                          </div>
+                          {/* Word count badge */}
+                          {wordCount > 0 && (
+                            <div className="absolute top-3 right-3 px-1.5 py-0.5 rounded text-[9px] font-medium" style={{ background: "var(--surface)", color: "var(--muted)", border: "1px solid var(--border)" }}>
+                              {wordCount.toLocaleString()} words
+                            </div>
+                          )}
+                          {/* Delete */}
+                          <button className="absolute bottom-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+                            style={{ background: "rgba(239,68,68,0.08)" }}
+                            onClick={(e) => deleteProject(p.id, e)}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.15)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239,68,68,0.08)")}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                          </button>
+                        </div>
+                        {/* Footer */}
+                        <div className="px-4 py-3 border-t" style={{ borderColor: "rgba(109,40,217,0.08)" }}>
+                          <h3 className="text-[13px] font-semibold truncate mb-1" style={{ color: "var(--foreground)" }}>{p.name}</h3>
+                          <div className="flex items-center gap-2 text-[10px]" style={{ color: "var(--muted)" }}>
+                            <span>{formatDate(p.updatedAt)}</span>
+                            {p.pdfs.length > 0 && (
+                              <>
+                                <span style={{ opacity: 0.3 }}>&middot;</span>
+                                <span className="flex items-center gap-0.5">
+                                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                  {p.pdfs.length} PDF{p.pdfs.length !== 1 ? "s" : ""}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
