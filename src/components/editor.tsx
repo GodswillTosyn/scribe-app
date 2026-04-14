@@ -328,14 +328,14 @@ function InspectorPanel({
                     <div key={c.id} className="group relative rounded-lg transition-colors cursor-pointer" style={{ background: "var(--purple-bg)" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple-bg)")}>
                       <button onClick={() => onClickCitation(c)} className="flex flex-col text-left p-2 w-full">
-                        <div className="flex items-center justify-between">
-                          <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? `, ${c.year}` : ""}, p.&nbsp;{c.page}</div>
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-[9px] font-medium shrink-0 ml-1" style={{ color: "var(--purple)" }}>
-                            Go to source
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                          </div>
-                        </div>
+                        <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? ` (${c.year})` : ""}</div>
                         <div className="text-[11px] leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.85 }}>&ldquo;{c.text.slice(0, 80)}{c.text.length > 80 ? "..." : ""}&rdquo;</div>
+                        <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span className="flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "var(--purple)" }}>
+                            Go to source
+                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                          </span>
+                        </div>
                       </button>
                       <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
                         className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded transition-all" style={{ color: "var(--muted)" }}
@@ -529,7 +529,7 @@ export default function Editor({
         // APA format: (Authors, Year, p. X)
         const authors = payload.authors || payload.filename.replace(/\.pdf$/i, "");
         const year = payload.year || "n.d.";
-        const apaRef = `(${authors}, ${year}, p.\u00A0${payload.page})`;
+        const apaRef = `(${authors}, ${year})`;
         // Clean up line breaks and extra whitespace from PDF text
         const cleanText = payload.text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -665,14 +665,21 @@ export default function Editor({
   // Generate APA reference list from citations
   const generateReferenceList = useCallback(() => {
     if (!editor || citations.length === 0) return;
-    const refs = citations.map((c, i) => {
-      const authors = c.authors || c.filename.replace(/\.pdf$/i, "");
-      const year = c.year || "n.d.";
-      return `[${i + 1}] ${authors} (${year}). <em>${c.filename.replace(/\.pdf$/i, "")}</em>. p.&nbsp;${c.page}.`;
-    });
-    // Deduplicate by author+year+filename
-    const unique = [...new Set(refs)];
-    const html = `<h2>References</h2><hr>${unique.map((r) => `<p>${r}</p>`).join("")}`;
+    // One reference per unique source (by filename), no page numbers
+    const seen = new Map<string, { authors: string; year: string; filename: string }>();
+    for (const c of citations) {
+      if (!seen.has(c.filename)) {
+        seen.set(c.filename, {
+          authors: c.authors || c.filename.replace(/\.pdf$/i, ""),
+          year: c.year || "n.d.",
+          filename: c.filename,
+        });
+      }
+    }
+    const refs = Array.from(seen.values()).map(
+      (s) => `<p>${s.authors} (${s.year}). <em>${s.filename.replace(/\.pdf$/i, "")}</em>.</p>`
+    );
+    const html = `<h2>References</h2><hr>${refs.join("")}`;
     queueMicrotask(() => {
       editor.chain().focus("end").insertContent(html).run();
     });

@@ -84,26 +84,37 @@ body {
   position: relative;
 }
 
-/* The tiptap editor fills full width, with padding per page */
+/* The tiptap editor fills full width with horizontal padding.
+   Vertical padding is handled per-page via the wrapper's padding-top
+   and per-page-break spacers injected by JS. */
 .editor-paginated-wrapper .tiptap {
   padding: var(--page-pad-y) var(--page-pad-x);
-  min-height: var(--page-height);
+  padding-bottom: var(--page-pad-y);
+  min-height: calc(var(--page-height) - var(--page-pad-y));
 }
 
 /*
   Page break lines + shadows rendered via pseudo-elements on the wrapper.
   The JS injects a CSS variable --total-pages and creates break markers.
 */
+/* Page break: covers the gap between pages, hides text bleed with
+   opaque background strips above and below the break line */
 .editor-page-break {
   position: absolute;
   left: 0;
   right: 0;
-  height: var(--page-gap);
+  height: calc(var(--page-gap) + var(--page-pad-y) * 2);
+  margin-top: calc(var(--page-pad-y) * -1);
   pointer-events: none;
   z-index: 10;
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Opaque strips to hide text bleeding across page boundaries */
+  background:
+    linear-gradient(to bottom, var(--panel-bg) calc(var(--page-pad-y) - 2px), transparent var(--page-pad-y)),
+    linear-gradient(to top, var(--panel-bg) calc(var(--page-pad-y) - 2px), transparent var(--page-pad-y)),
+    var(--background);
 }
 
 /* Top shadow of next page */
