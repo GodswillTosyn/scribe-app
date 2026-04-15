@@ -180,6 +180,43 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     db.projects.update(id, { pdfs: project.pdfs.map((p) => p.id === pdfId ? { ...p, lastPage: page } : p), updatedAt: Date.now() });
   }, [project, id]);
 
+  const handleSummarizePdf = useCallback(async (pdfId: string) => {
+    if (!project) return;
+    const pdf = project.pdfs.find((p) => p.id === pdfId);
+    if (!pdf) return;
+    toast.loading("Generating summary...", { id: "summarize" });
+    try {
+      // Decode base64 PDF data and extract text using pdfjs
+      const { pdfjs } = await import("react-pdf");
+      const raw = atob(pdf.data.split(",")[1] || pdf.data);
+      const bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+      const pdfDoc = await pdfjs.getDocument({ data: bytes }).promise;
+      const maxPages = Math.min(pdfDoc.numPages, 3);
+      const texts: string[] = [];
+      for (let i = 1; i <= maxPages; i++) {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        texts.push(content.items.map((item) => ("str" in item ? item.str : "")).join(" "));
+      }
+      const text = texts.join("\n").slice(0, 4000);
+      if (text.trim().length < 50) { toast.error("Not enough text to summarize", { id: "summarize" }); return; }
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: "Summarize this research paper in 2-3 concise sentences. Be factual and academic.", context: text, chatHistory: [] }),
+      });
+      if (!res.ok) throw new Error("AI request failed");
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let summary = "";
+      if (reader) { while (true) { const { done, value } = await reader.read(); if (done) break; summary += decoder.decode(value, { stream: true }); } }
+      summary = summary.trim();
+      await db.projects.update(id, { pdfs: project.pdfs.map((p) => p.id === pdfId ? { ...p, summary } : p), updatedAt: Date.now() });
+      toast.success("Summary generated", { id: "summarize" });
+    } catch { toast.error("Failed to generate summary", { id: "summarize" }); }
+  }, [project, id]);
+
   useEffect(() => {
     const h = (e: Event) => {
       const payload = (e as CustomEvent<CitationPayload>).detail;
@@ -347,7 +384,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
                 Close
               </button>
               {showLibrary ? (
-                <PdfLibrary pdfs={pdfs} activePdfId={activePdfId} onSelect={(pdfId) => { handleSelectPdf(pdfId); }} onAdd={handleAddPdf} onRemove={handleRemovePdfs} onUpdateMeta={handleUpdatePdfMeta} />
+                <PdfLibrary pdfs={pdfs} activePdfId={activePdfId} onSelect={(pdfId) => { handleSelectPdf(pdfId); }} onAdd={handleAddPdf} onRemove={handleRemovePdfs} onUpdateMeta={handleUpdatePdfMeta} onSummarize={handleSummarizePdf} />
               ) : (
                 <>
                   <button onClick={() => setShowLibrary(true)} className="flex items-center gap-1.5 px-3 h-9 shrink-0 border-b text-[11px] font-medium transition-colors"

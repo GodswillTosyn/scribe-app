@@ -7,6 +7,7 @@ export interface PdfFile {
   authors: string;
   year: string;
   lastPage: number;
+  summary?: string;
 }
 
 export interface ChatMessage {

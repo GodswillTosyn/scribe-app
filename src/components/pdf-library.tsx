@@ -28,6 +28,7 @@ interface PdfLibraryProps {
   onAdd: (file: File) => void;
   onRemove: (ids: string[]) => void;
   onUpdateMeta: (id: string, authors: string, year: string) => void;
+  onSummarize?: (id: string) => void;
 }
 
 export default function PdfLibrary({
@@ -37,6 +38,7 @@ export default function PdfLibrary({
   onAdd,
   onRemove,
   onUpdateMeta,
+  onSummarize,
 }: PdfLibraryProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -264,6 +266,13 @@ export default function PdfLibrary({
                     {/* Action buttons */}
                     {!isEditing && (
                       <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                        {onSummarize && (
+                          <button onClick={(e) => { e.stopPropagation(); onSummarize(pdf.id); }} className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
+                            style={{ background: "rgba(124,58,237,0.1)", backdropFilter: "blur(4px)", color: "var(--purple)" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(124,58,237,0.2)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(124,58,237,0.1)")} title="AI Summarize">
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.5 4.5H18l-3.5 2.5L16 14.5 12 11.5 8 14.5l1.5-4.5L6 7.5h4.5z" /></svg>
+                          </button>
+                        )}
                         <button onClick={(e) => startEdit(pdf, e)} className="w-7 h-7 rounded-lg flex items-center justify-center transition-all"
                           style={{ background: "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)", color: "var(--muted)" }}
                           onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.95)")} onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.8)")} title="Edit">
@@ -306,6 +315,11 @@ export default function PdfLibrary({
                             <span style={{ opacity: 0.5, fontStyle: "italic" }}>No author set</span>
                           )}
                         </div>
+                        {pdf.summary && (
+                          <div className="text-[9px] mt-1 leading-relaxed line-clamp-3" style={{ color: "var(--muted)", opacity: 0.8 }}>
+                            {pdf.summary}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

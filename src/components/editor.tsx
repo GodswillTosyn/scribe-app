@@ -96,6 +96,181 @@ function TablePicker({ onInsert }: { onInsert: (rows: number, cols: number) => v
   );
 }
 
+/* ─── AI Actions Menu ─── */
+function AiActionsMenu({ editor, getContext, citations }: { editor: TiptapEditor; getContext: () => string; citations: CitationPayload[] }) {
+  const [open, setOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const streamAi = async (prompt: string, context: string): Promise<string> => {
+    const res = await fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, context, chatHistory: [] }),
+    });
+    if (!res.ok) throw new Error("AI request failed");
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+    let text = "";
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
+    }
+    return text.trim();
+  };
+
+  const handleLiteratureReview = async () => {
+    setOpen(false);
+    setGenerating(true);
+    try {
+      const context = getContext();
+      const citInfo = citations.map((c) => `- ${c.authors || c.filename} (${c.year || "n.d."}): "${c.text.slice(0, 200)}"`).join("\n");
+      const fullContext = `${context}\n\nAvailable citations:\n${citInfo}`;
+      const result = await streamAi(
+        "Based on the following research papers and citations, draft a structured literature review section. Synthesize and compare the findings. Use in-text APA citations with the author names and years provided. Structure with an introduction, thematic analysis, and synthesis.",
+        fullContext
+      );
+      queueMicrotask(() => {
+        editor.chain().focus("end").insertContent(`<blockquote><p>${result.replace(/\n/g, "<br>")}</p></blockquote><p></p>`).run();
+      });
+      toast.success("Literature review drafted");
+    } catch { toast.error("AI generation failed"); }
+    setGenerating(false);
+  };
+
+  const handleAbstract = async () => {
+    setOpen(false);
+    setGenerating(true);
+    try {
+      const result = await streamAi(
+        "Based on the following research content, generate a formal academic abstract (150-250 words) following the structure: Background, Purpose, Methods (if applicable), Key Findings, Conclusion. Only return the abstract text.",
+        editor.getText().slice(0, 6000)
+      );
+      queueMicrotask(() => {
+        editor.chain().focus("start").insertContentAt(0, `<h2>Abstract</h2><p>${result.replace(/\n/g, "<br>")}</p><hr>`).run();
+      });
+      toast.success("Abstract generated");
+    } catch { toast.error("AI generation failed"); }
+    setGenerating(false);
+  };
+
+  const handleImproveSelection = async () => {
+    const { from, to } = editor.state.selection;
+    if (from === to) { toast.error("Select text first"); setOpen(false); return; }
+    const selectedText = editor.state.doc.textBetween(from, to);
+    setOpen(false);
+    setGenerating(true);
+    try {
+      const result = await streamAi(
+        "Rewrite this text for academic clarity and proper tone. Keep the meaning intact. Only return the improved text, nothing else.",
+        selectedText
+      );
+      queueMicrotask(() => {
+        editor.chain().focus().deleteRange({ from, to }).insertContentAt(from, result).run();
+      });
+      toast.success("Text improved");
+    } catch { toast.error("AI generation failed"); }
+    setGenerating(false);
+  };
+
+  const handleCheckCitations = async () => {
+    setOpen(false);
+    setGenerating(true);
+    try {
+      const citList = citations.map((c) => `- ${c.authors || c.filename} (${c.year || "n.d."})`).join("\n");
+      const result = await streamAi(
+        "Review the following text and citation list. Check for: 1) Any in-text citations (Author, Year) that don't have a matching source in the citation list, 2) Any inconsistencies in author names or years, 3) Any claims that appear to need a citation but don't have one. Return a brief report of any issues found.",
+        `Text:\n${editor.getText().slice(0, 5000)}\n\nCitation list:\n${citList}`
+      );
+      toast.success(result.slice(0, 300), { duration: 12000 });
+    } catch { toast.error("AI generation failed"); }
+    setGenerating(false);
+  };
+
+  const handleContinueWriting = async () => {
+    setOpen(false);
+    setGenerating(true);
+    try {
+      const fullText = editor.getText();
+      const lastChunk = fullText.slice(-500);
+      const result = await streamAi(
+        "Continue writing the next paragraph of this academic text. Match the tone and style. Only return the continuation, not the existing text.",
+        lastChunk
+      );
+      queueMicrotask(() => {
+        editor.chain().focus("end").insertContent(`<p>${result.replace(/\n/g, "<br>")}</p>`).run();
+      });
+      toast.success("Continuation inserted");
+    } catch { toast.error("AI generation failed"); }
+    setGenerating(false);
+  };
+
+  const menuBtnStyle = {
+    color: "var(--foreground)",
+    background: "transparent",
+  };
+
+  return (
+    <div className="relative" ref={menuRef}>
+      <Btn onClick={() => setOpen(!open)} isActive={open || generating} title="AI Writing Tools">
+        {generating ? (
+          <div className="w-3.5 h-3.5 border-2 rounded-full animate-spin" style={{ borderColor: "var(--purple)", borderTopColor: "transparent" }} />
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="url(#ai-act-g)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <defs><linearGradient id="ai-act-g" x1="0" y1="0" x2="24" y2="24"><stop offset="0%" stopColor="#7C3AED" /><stop offset="100%" stopColor="#3B82F6" /></linearGradient></defs>
+            <path d="M12 3l1.5 4.5H18l-3.5 2.5L16 14.5 12 11.5 8 14.5l1.5-4.5L6 7.5h4.5z" />
+            <path d="M5 19l1 2" /><path d="M19 19l-1 2" />
+          </svg>
+        )}
+      </Btn>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 py-1 rounded-xl shadow-lg border z-50 w-52" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+          <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>AI Writing Tools</div>
+          <button onClick={handleLiteratureReview} className="flex items-center gap-2 w-full px-3 py-2 text-[11px] transition-colors" style={menuBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>
+            Literature Review
+          </button>
+          <button onClick={handleAbstract} className="flex items-center gap-2 w-full px-3 py-2 text-[11px] transition-colors" style={menuBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="7" y1="8" x2="17" y2="8" /><line x1="7" y1="12" x2="17" y2="12" /><line x1="7" y1="16" x2="13" y2="16" /></svg>
+            Generate Abstract
+          </button>
+          <button onClick={handleImproveSelection} className="flex items-center gap-2 w-full px-3 py-2 text-[11px] transition-colors" style={menuBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+            Improve Selection
+          </button>
+          <button onClick={handleCheckCitations} className="flex items-center gap-2 w-full px-3 py-2 text-[11px] transition-colors" style={menuBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+            Check Citations
+          </button>
+          <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
+          <button onClick={handleContinueWriting} className="flex items-center gap-2 w-full px-3 py-2 text-[11px] transition-colors" style={menuBtnStyle}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+            Continue Writing
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", "Courier New", "Comic Sans MS"];
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
@@ -157,7 +332,7 @@ function TableToolbar({ editor }: { editor: TiptapEditor }) {
 }
 
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint, onAddComment, margins, onSetMargins }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void; onAddComment: () => void; margins: { top: number; right: number; bottom: number; left: number }; onSetMargins: (m: { top: number; right: number; bottom: number; left: number }) => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint, onAddComment, margins, onSetMargins, getContext, citations }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void; onAddComment: () => void; margins: { top: number; right: number; bottom: number; left: number }; onSetMargins: (m: { top: number; right: number; bottom: number; left: number }) => void; getContext: () => string; citations: CitationPayload[] }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -471,6 +646,11 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
             </div>
           )}
         </div>
+      </Grp>
+      <Sep />
+      {/* AI Writing Tools */}
+      <Grp label="AI">
+        <AiActionsMenu editor={editor} getContext={getContext} citations={citations} />
       </Grp>
     </div>
   );
@@ -1331,7 +1511,7 @@ export default function Editor({
           </button>
         </div>
 
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} onAddComment={handleAddComment} margins={margins} onSetMargins={setMargins} />
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} onAddComment={handleAddComment} margins={margins} onSetMargins={setMargins} getContext={getContext} citations={citations} />
         <TableToolbar editor={editor} />
         {showFindReplace && <FindReplaceBar editor={editor} onClose={() => setShowFindReplace(false)} />}
 
