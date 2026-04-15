@@ -133,6 +133,16 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     if (file?.type === "application/pdf") handleAddPdf(file);
   }, [handleAddPdf]);
 
+  // Listen for "Add to Sources" from Papers tab
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const file = (e as CustomEvent<File>).detail;
+      if (file) handleAddPdf(file);
+    };
+    window.addEventListener("scribe:add-pdf-file", handler);
+    return () => window.removeEventListener("scribe:add-pdf-file", handler);
+  }, [handleAddPdf]);
+
   const handleCite = useCallback((payload: CitationPayload) => {
     if (!project) return;
     const ap = project.pdfs.find((p) => p.id === project.activePdfId);
