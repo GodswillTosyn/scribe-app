@@ -503,52 +503,49 @@ function InspectorPanel({
         </button>
       </div>
 
-      {/* Tab content with slide animation */}
+      {/* Tab content — all tabs stay mounted to preserve state */}
       <div className="flex-1 overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {tab === "citations" ? (
-            <motion.div key="citations" initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0 overflow-y-auto px-2 py-2">
-              {citations.length === 0 ? (
-                <div className="px-2 py-6 text-center">
-                  <p className="text-[11px]" style={{ color: "var(--muted)" }}>No citations yet</p>
-                  <p className="text-[10px] mt-1" style={{ color: "var(--muted)", opacity: 0.6 }}>Select text in the PDF and click Cite</p>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-1.5">
-                  {citations.map((c, i) => (
-                    <div key={c.id} className="group relative rounded-lg transition-colors cursor-pointer" style={{ background: "var(--purple-bg)" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple-bg)")}>
-                      <button onClick={() => onClickCitation(c)} className="flex flex-col text-left p-2 w-full">
-                        <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? ` (${c.year})` : ""}</div>
-                        <div className="text-[11px] leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.85 }}>&ldquo;{c.text.slice(0, 80)}{c.text.length > 80 ? "..." : ""}&rdquo;</div>
-                        <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span className="flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "var(--purple)" }}>
-                            Go to source
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
-                          </span>
-                        </div>
-                      </button>
-                      <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
-                        className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded transition-all" style={{ color: "var(--muted)" }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#ef4444"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted)"; }} title="Remove citation">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          ) : tab === "ai" ? (
-            <motion.div key="ai" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0">
-              <AiChat chatHistory={chatHistory} onUpdateHistory={onUpdateChat} getContext={getContext} />
-            </motion.div>
+        {/* Citations */}
+        <div className="absolute inset-0 overflow-y-auto px-2 py-2" style={{ display: tab === "citations" ? "block" : "none" }}>
+          {citations.length === 0 ? (
+            <div className="px-2 py-6 text-center">
+              <p className="text-[11px]" style={{ color: "var(--muted)" }}>No citations yet</p>
+              <p className="text-[10px] mt-1" style={{ color: "var(--muted)", opacity: 0.6 }}>Select text in the PDF and click Cite</p>
+            </div>
           ) : (
-            <motion.div key="arxiv" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 20, opacity: 0 }} transition={{ duration: 0.15 }} className="absolute inset-0">
-              <ArxivSearch />
-            </motion.div>
+            <div className="flex flex-col gap-1.5">
+              {citations.map((c, i) => (
+                <div key={c.id} className="group relative rounded-lg transition-colors cursor-pointer" style={{ background: "var(--purple-bg)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--purple-hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "var(--purple-bg)")}>
+                  <button onClick={() => onClickCitation(c)} className="flex flex-col text-left p-2 w-full">
+                    <div className="text-[10px] font-medium mb-1" style={{ color: "var(--purple)" }}>[{i + 1}] {c.authors || c.filename.replace(/\.pdf$/i, "")}{c.year ? ` (${c.year})` : ""}</div>
+                    <div className="text-[11px] leading-relaxed" style={{ color: "var(--foreground)", opacity: 0.85 }}>&ldquo;{c.text.slice(0, 80)}{c.text.length > 80 ? "..." : ""}&rdquo;</div>
+                    <div className="flex justify-end mt-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="flex items-center gap-0.5 text-[9px] font-medium" style={{ color: "var(--purple)" }}>
+                        Go to source
+                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+                      </span>
+                    </div>
+                  </button>
+                  <button onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
+                    className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 flex items-center justify-center w-5 h-5 rounded transition-all" style={{ color: "var(--muted)" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.15)"; e.currentTarget.style.color = "#ef4444"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "var(--muted)"; }} title="Remove citation">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-        </AnimatePresence>
+        </div>
+        {/* AI Chat — always mounted */}
+        <div className="absolute inset-0" style={{ display: tab === "ai" ? "block" : "none" }}>
+          <AiChat chatHistory={chatHistory} onUpdateHistory={onUpdateChat} getContext={getContext} />
+        </div>
+        {/* Papers search — always mounted */}
+        <div className="absolute inset-0" style={{ display: tab === "arxiv" ? "block" : "none" }}>
+          <ArxivSearch />
+        </div>
       </div>
     </div>
   );

@@ -123,25 +123,29 @@ export default function PdfViewer({
     const c = containerRef.current;
     if (!c) return;
     const up = () => {
+      // Longer delay to let browser finalize selection across PDF spans
       setTimeout(() => {
         const sel = window.getSelection();
-        if (!sel || sel.isCollapsed) { setPopover(null); return; }
-        let text = sel.toString().trim();
-        // Clean up partial words at boundaries from PDF text selection
-        text = text.replace(/^[^\s]*\s/, (m) => m.length > 20 ? '' : m).replace(/\s[^\s]*$/, (m) => m.length > 20 ? '' : m);
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) { setPopover(null); return; }
+        // Get the raw selected text — don't strip words, just normalize whitespace
+        let text = sel.toString();
+        // Replace PDF line breaks (newlines mid-sentence) with spaces
+        text = text.replace(/\r?\n/g, ' ');
+        // Collapse multiple spaces
         text = text.replace(/\s+/g, ' ').trim();
-        if (text.length < 2) { setPopover(null); return; }
+        if (text.length < 3) { setPopover(null); return; }
         const anchor = sel.anchorNode, focus = sel.focusNode;
         if (!anchor || !focus || (!c.contains(anchor) && !c.contains(focus))) { setPopover(null); return; }
         try {
           const range = sel.getRangeAt(0), rect = range.getBoundingClientRect();
+          if (rect.width < 5) { setPopover(null); return; } // ignore accidental clicks
           const page = getPageNumber(anchor);
           const pe = c.querySelector(`[data-page-number="${page}"]`);
           let posY = 0;
           if (pe) { const pr = pe.getBoundingClientRect(); posY = Math.max(0, Math.min(1, (rect.top - pr.top) / pr.height)); }
           setPopover({ x: rect.left + rect.width / 2, y: rect.top - 10, payload: { id: crypto.randomUUID(), text, filename: pdfName || "document.pdf", authors: "", year: "", page, posY } });
         } catch { setPopover(null); }
-      }, 10);
+      }, 50);
     };
     const down = (e: MouseEvent) => { if (popoverBtnRef.current?.contains(e.target as Node)) return; setPopover(null); };
     document.addEventListener("mouseup", up);

@@ -31,9 +31,13 @@ export default function AiChat({
 
   const sendRef = useRef<(text: string) => void>(undefined);
 
-  // Sync from parent on mount
+  // Sync from parent on mount, scroll to latest
   useEffect(() => {
     setMessages(chatHistory);
+    // Scroll to bottom after messages load
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    });
   }, [chatHistory]);
 
   // Listen for AI ask events from the PDF mini-menu
