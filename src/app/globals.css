@@ -84,100 +84,14 @@ body {
   position: relative;
 }
 
-/* The tiptap editor fills full width with horizontal padding.
-   Vertical padding is handled per-page via the wrapper's padding-top
-   and per-page-break spacers injected by JS. */
+/* The editor surface — clean, no fake page overlays */
 .editor-paginated-wrapper .tiptap {
   padding: var(--page-pad-y) var(--page-pad-x);
-  padding-bottom: var(--page-pad-y);
-  min-height: calc(var(--page-height) - var(--page-pad-y));
-}
-
-/*
-  Page break lines + shadows rendered via pseudo-elements on the wrapper.
-  The JS injects a CSS variable --total-pages and creates break markers.
-*/
-/* Page break: covers the gap between pages, hides text bleed with
-   opaque background strips above and below the break line */
-.editor-page-break {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: calc(var(--page-gap) + var(--page-pad-y) * 2);
-  margin-top: calc(var(--page-pad-y) * -1);
-  pointer-events: none;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Opaque strips to hide text bleeding across page boundaries */
-  background:
-    linear-gradient(to bottom, var(--panel-bg) calc(var(--page-pad-y) - 2px), transparent var(--page-pad-y)),
-    linear-gradient(to top, var(--panel-bg) calc(var(--page-pad-y) - 2px), transparent var(--page-pad-y)),
-    var(--background);
-}
-
-/* Top shadow of next page */
-.editor-page-break::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.06), transparent);
-}
-
-/* Bottom shadow of previous page */
-.editor-page-break::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(to top, rgba(0,0,0,0.06), transparent);
-}
-
-/* The break line itself */
-.editor-page-break-line {
-  width: 100%;
-  border-top: 1px dashed var(--border);
-  position: relative;
-}
-
-/* Page number badges */
-.editor-page-break-label {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 9px;
-  color: var(--muted);
-  opacity: 0.5;
-  font-family: "Space Grotesk", system-ui, sans-serif;
-  background: var(--background);
-  padding: 1px 6px;
-  border-radius: 4px;
-}
-
-/* Page background — the wrapper gets a repeating background to look like stacked sheets */
-.editor-page-bg {
-  position: absolute;
-  left: 0;
-  width: var(--page-width);
-  height: var(--page-height);
+  min-height: var(--page-height);
   background: var(--panel-bg);
-  border: 1px solid var(--border-subtle);
-  border-radius: 4px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.editor-paginated-wrapper .tiptap {
-  position: relative;
-  z-index: 1;
+  border-left: 1px solid var(--border-subtle);
+  border-right: 1px solid var(--border-subtle);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   overflow-wrap: break-word;
   word-break: break-word;
 }
@@ -592,33 +506,66 @@ body {
   50% { box-shadow: 0 0 12px rgba(124,58,237,0.35), 0 0 4px rgba(59,130,246,0.25); }
 }
 
-/* Hard page break */
+/* Hard page break — visible separator in editor, real break in print */
 .hard-page-break {
   break-after: page;
   page-break-after: always;
-  height: 0;
+  height: 40px;
   border: none;
-  margin: 0;
+  margin: 24px 0;
   padding: 0;
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  user-select: none;
+}
+.hard-page-break::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 1px dashed var(--border);
 }
 .hard-page-break::after {
-  content: "Page Break";
-  display: block;
+  content: "PAGE BREAK";
+  display: inline-block;
   text-align: center;
-  font-size: 9px;
+  font-size: 8px;
   color: var(--muted);
-  opacity: 0.4;
-  padding: 8px 0;
-  border-top: 1px dashed var(--border);
-  border-bottom: 1px dashed var(--border);
-  margin: 16px 0;
+  opacity: 0.5;
+  padding: 2px 12px;
+  background: var(--panel-bg);
+  position: relative;
+  z-index: 1;
   font-family: "Space Grotesk", system-ui, sans-serif;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
+  border-radius: 4px;
 }
 
-/* ─── Real page breaks ─── */
+/* ─── Print styles ─── */
+@media print {
+  .editor-paginated-wrapper .tiptap {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+  .hard-page-break {
+    height: 0 !important;
+    margin: 0 !important;
+    break-after: page !important;
+    page-break-after: always !important;
+  }
+  .hard-page-break::before,
+  .hard-page-break::after {
+    display: none !important;
+  }
+}
+
+/* Avoid breaking inside block elements */
 .editor-paginated-wrapper .tiptap p,
 .editor-paginated-wrapper .tiptap h1,
 .editor-paginated-wrapper .tiptap h2,

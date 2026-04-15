@@ -118,11 +118,19 @@ const CommentMark = Mark.create({
 const HardPageBreak = TiptapNode.create({
   name: "hardPageBreak",
   group: "block",
+  atom: true,
+  selectable: true,
   parseHTML() { return [{ tag: "div[data-page-break]" }]; },
-  renderHTML() { return ["div", { "data-page-break": "", class: "hard-page-break" }, 0]; },
+  renderHTML() { return ["div", { "data-page-break": "true", class: "hard-page-break" }]; },
   addKeyboardShortcuts() {
     return {
-      "Mod-Enter": () => this.editor.chain().focus().insertContent({ type: this.name }).insertContent({ type: "paragraph" }).run(),
+      "Mod-Enter": () => {
+        return this.editor.chain()
+          .insertContent({ type: this.name })
+          .insertContent({ type: "paragraph" })
+          .focus("end")
+          .run();
+      },
     };
   },
 });
@@ -1182,7 +1190,7 @@ export default function Editor({
     if (!editor) return;
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
-    printWindow.document.write(`<!DOCTYPE html><html><head><title>${projectName}</title><style>body{font-family:"Space Grotesk",system-ui,sans-serif;padding:40px;max-width:800px;margin:0 auto;font-size:15px;line-height:1.75}h1{font-size:1.875rem;font-weight:700}h2{font-size:1.375rem;font-weight:600}h3{font-size:1.125rem;font-weight:600}blockquote{border-left:3px solid #6D28D9;padding-left:1rem;color:#71717a}table{border-collapse:collapse;width:100%}th,td{border:1px solid #E8E8E8;padding:0.5rem 0.75rem;text-align:left}th{background:#FAFAFA;font-weight:600}ul[data-type="taskList"]{list-style:none;padding-left:0}ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:0.5rem}</style></head><body>${editor.getHTML()}</body></html>`);
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${projectName}</title><style>@page{margin:1in}body{font-family:"Space Grotesk",system-ui,sans-serif;padding:0;max-width:none;margin:0;font-size:15px;line-height:1.75}h1{font-size:1.875rem;font-weight:700}h2{font-size:1.375rem;font-weight:600}h3{font-size:1.125rem;font-weight:600}blockquote{border-left:3px solid #6D28D9;padding-left:1rem;color:#71717a}table{border-collapse:collapse;width:100%}th,td{border:1px solid #E8E8E8;padding:0.5rem 0.75rem;text-align:left}th{background:#FAFAFA;font-weight:600}ul[data-type="taskList"]{list-style:none;padding-left:0}ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:0.5rem}div[data-page-break]{break-after:page;page-break-after:always;height:0;margin:0;padding:0;border:none}</style></head><body>${editor.getHTML()}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();
@@ -1222,8 +1230,7 @@ export default function Editor({
     return () => { window.removeEventListener("scribe:export-word", onWord); window.removeEventListener("scribe:export-pdf", onPdf); };
   }, [handleExportWord, handleExportPdf]);
 
-  // Page tracking
-  const PAGE_H = 1056;
+  // Page tracking — count page breaks in content
   const PAGE_GAP = 32;
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -1231,49 +1238,47 @@ export default function Editor({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Recalculate pages from content height
+  // Count pages = number of hard page breaks + 1
   useEffect(() => {
     if (!editor) return;
     const recalc = () => {
-      const el = wrapperRef.current?.querySelector(".tiptap") as HTMLElement | null;
-      if (!el) return;
-      const h = el.scrollHeight;
-      setTotalPages(Math.max(1, Math.ceil(h / PAGE_H)));
+      const breaks = wrapperRef.current?.querySelectorAll(".hard-page-break")?.length || 0;
+      setTotalPages(breaks + 1);
     };
     recalc();
     const obs = new MutationObserver(recalc);
     const el = wrapperRef.current?.querySelector(".tiptap");
-    if (el) obs.observe(el, { childList: true, subtree: true, characterData: true });
-    window.addEventListener("resize", recalc);
-    return () => { obs.disconnect(); window.removeEventListener("resize", recalc); };
+    if (el) obs.observe(el, { childList: true, subtree: true });
+    return () => obs.disconnect();
   }, [editor]);
 
-  // Track visible page on scroll
+  // Track which page the cursor is on by counting page breaks above scroll position
   useEffect(() => {
     const c = scrollContainerRef.current;
     if (!c) return;
     const onScroll = () => {
-      // Account for top padding (32px) + page breaks
-      const scrollTop = c.scrollTop;
-      const effectivePageH = PAGE_H + PAGE_GAP;
-      const p = Math.max(1, Math.floor((scrollTop + PAGE_H / 3) / effectivePageH) + 1);
-      setCurrentPage(Math.min(p, totalPages));
+      const breaks = Array.from(c.querySelectorAll(".hard-page-break"));
+      const scrollMid = c.scrollTop + c.clientHeight / 3;
+      let page = 1;
+      for (const br of breaks) {
+        if ((br as HTMLElement).offsetTop < scrollMid) page++;
+      }
+      setCurrentPage(Math.min(page, totalPages));
     };
     c.addEventListener("scroll", onScroll, { passive: true });
     return () => c.removeEventListener("scroll", onScroll);
   }, [totalPages]);
 
   const goToPage = useCallback((p: number) => {
-    scrollContainerRef.current?.scrollTo({
-      top: (p - 1) * (PAGE_H + PAGE_GAP),
-      behavior: "smooth",
-    });
+    const breaks = Array.from(scrollContainerRef.current?.querySelectorAll(".hard-page-break") || []);
+    if (p <= 1) {
+      scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (breaks[p - 2]) {
+      (breaks[p - 2] as HTMLElement).scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }, []);
 
   if (!editor) return null;
-
-  // Wrapper height: pages * page_height + breaks between + padding/gaps
-  const wrapperMinH = totalPages * PAGE_H + (totalPages - 1) * PAGE_GAP;
 
   return (
     <div className="flex h-full">
@@ -1336,34 +1341,10 @@ export default function Editor({
         {/* Dynamic margin styles */}
         <style>{`.editor-paginated-wrapper .tiptap { padding: ${marginTop}px ${marginRight}px ${marginBottom}px ${marginLeft}px !important; }`}</style>
 
-        {/* Paginated editor */}
+        {/* Editor area — clean continuous surface, page breaks are inline nodes */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>
           <div style={{ padding: `${PAGE_GAP}px 0` }}>
-            <div ref={wrapperRef} className="editor-paginated-wrapper" style={{ minHeight: wrapperMinH }}>
-              {/* Page background sheets */}
-              {Array.from({ length: totalPages }, (_, i) => (
-                <div
-                  key={`bg-${i}`}
-                  className="editor-page-bg"
-                  style={{ top: i * (PAGE_H + PAGE_GAP) }}
-                />
-              ))}
-
-              {/* Page break lines between pages */}
-              {Array.from({ length: Math.max(0, totalPages - 1) }, (_, i) => (
-                <div
-                  key={`br-${i}`}
-                  className="editor-page-break"
-                  style={{ top: (i + 1) * PAGE_H + i * PAGE_GAP }}
-                >
-                  <div className="editor-page-break-line" />
-                  <div className="editor-page-break-label">
-                    Page {i + 2}
-                  </div>
-                </div>
-              ))}
-
-              {/* The actual editor — single continuous editable surface */}
+            <div ref={wrapperRef} className="editor-paginated-wrapper">
               <EditorContent editor={editor} />
             </div>
           </div>

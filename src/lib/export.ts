@@ -7,6 +7,7 @@ import {
   TextRun,
   HeadingLevel,
   AlignmentType,
+  PageBreak,
 } from "docx";
 import { saveAs } from "file-saver";
 
@@ -61,6 +62,13 @@ function htmlToParagraphs(html: string): Paragraph[] {
           children: [
             new TextRun({ text: el.textContent || "", italics: true }),
           ],
+        })
+      );
+    } else if (tag === "div" && el.getAttribute("data-page-break") !== null) {
+      // Hard page break
+      paragraphs.push(
+        new Paragraph({
+          children: [new PageBreak()],
         })
       );
     } else if (tag === "div" && el.getAttribute("data-type") === "citation") {
@@ -169,6 +177,7 @@ export function exportToPdf(html: string, projectName: string): void {
         pre { background: #fafafa; border: 1px solid #e8e8e8; border-radius: 6px; padding: 1rem; }
         hr { border: none; border-top: 1px solid #e8e8e8; margin: 1.5rem 0; }
         ul, ol { padding-left: 1.5rem; }
+        div[data-page-break] { break-after: page; page-break-after: always; height: 0; margin: 0; padding: 0; border: none; }
       </style>
     </head>
     <body>${html}</body>
