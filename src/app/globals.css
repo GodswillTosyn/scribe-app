@@ -265,6 +265,27 @@ body {
   background: var(--purple-bg);
 }
 
+/* Drag handle for blocks */
+.tiptap .ProseMirror-focused .is-empty::before {
+  color: var(--muted);
+  opacity: 0.3;
+}
+
+/* Drop cursor */
+.ProseMirror-dropcursor {
+  color: var(--purple) !important;
+}
+
+/* Table controls highlight */
+.tiptap table .selectedCell {
+  background: var(--purple-bg) !important;
+}
+
+.tiptap .tableWrapper {
+  position: relative;
+  overflow-x: auto;
+}
+
 /* Drag & drop zone */
 .drop-zone-active {
   background: var(--purple-bg) !important;

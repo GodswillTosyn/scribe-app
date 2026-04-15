@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useEditor, EditorContent, Editor as TiptapEditor } from "@tiptap/react";
+import { Mark } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -18,7 +19,9 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Typography from "@tiptap/extension-typography";
 import CharacterCount from "@tiptap/extension-character-count";
+import Dropcursor from "@tiptap/extension-dropcursor";
 import { motion, AnimatePresence } from "framer-motion";
+import GrammarCheck from "./grammar-check";
 import type { CitationPayload } from "./pdf-viewer";
 import type { ChatMessage, CitationRecord, VersionSnapshot } from "@/lib/db";
 import { db } from "@/lib/db";
@@ -96,13 +99,50 @@ function TablePicker({ onInsert }: { onInsert: (rows: number, cols: number) => v
 const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", "Courier New", "Comic Sans MS"];
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
+/* ─── Comment Mark Extension ─── */
+const CommentMark = Mark.create({
+  name: "comment",
+  addAttributes() {
+    return {
+      comment: { default: "" },
+      id: { default: "" },
+    };
+  },
+  parseHTML() { return [{ tag: "span[data-comment]" }]; },
+  renderHTML({ HTMLAttributes }) {
+    return ["span", { ...HTMLAttributes, "data-comment": HTMLAttributes.comment, style: "background: rgba(250,204,21,0.3); border-bottom: 2px solid rgba(250,204,21,0.6); cursor: help;", title: HTMLAttributes.comment }, 0];
+  },
+});
+
+/* ─── Table Toolbar (contextual, shown when cursor is in table) ─── */
+function TableToolbar({ editor }: { editor: TiptapEditor }) {
+  if (!editor.isActive("table")) return null;
+  return (
+    <div className="flex items-center gap-0.5 px-2 py-1 border-b shrink-0 flex-wrap" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
+      <span className="text-[10px] font-medium mr-1" style={{ color: "var(--muted)" }}>Table:</span>
+      <Btn onClick={() => editor.chain().focus().addRowBefore().run()} title="Add Row Above"><span className="text-[10px]">+Row&uarr;</span></Btn>
+      <Btn onClick={() => editor.chain().focus().addRowAfter().run()} title="Add Row Below"><span className="text-[10px]">+Row&darr;</span></Btn>
+      <Btn onClick={() => editor.chain().focus().addColumnBefore().run()} title="Add Column Left"><span className="text-[10px]">+Col&larr;</span></Btn>
+      <Btn onClick={() => editor.chain().focus().addColumnAfter().run()} title="Add Column Right"><span className="text-[10px]">+Col&rarr;</span></Btn>
+      <Sep />
+      <Btn onClick={() => editor.chain().focus().deleteRow().run()} title="Delete Row"><span className="text-[10px]" style={{ color: "#ef4444" }}>-Row</span></Btn>
+      <Btn onClick={() => editor.chain().focus().deleteColumn().run()} title="Delete Column"><span className="text-[10px]" style={{ color: "#ef4444" }}>-Col</span></Btn>
+      <Btn onClick={() => editor.chain().focus().deleteTable().run()} title="Delete Table"><span className="text-[10px]" style={{ color: "#ef4444" }}>Del Table</span></Btn>
+      <Sep />
+      <Btn onClick={() => editor.chain().focus().mergeCells().run()} title="Merge Cells"><span className="text-[10px]">Merge</span></Btn>
+      <Btn onClick={() => editor.chain().focus().splitCell().run()} title="Split Cell"><span className="text-[10px]">Split</span></Btn>
+    </div>
+  );
+}
+
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint, onAddComment }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void; onAddComment: () => void }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showColorMenu, setShowColorMenu] = useState(false);
   const [showSpecialChars, setShowSpecialChars] = useState(false);
+  const [showGrammar, setShowGrammar] = useState(false);
 
   const COLOR_PRESETS = [
     { label: "Black", value: "#000000" },
@@ -322,6 +362,23 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
             <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
           </svg>
         </Btn>
+      </Grp>
+      <Sep />
+      {/* Comment */}
+      <Grp label="Comment">
+        <Btn onClick={onAddComment} isActive={editor.isActive("comment")} title="Add Comment">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+        </Btn>
+      </Grp>
+      <Sep />
+      {/* Grammar Check */}
+      <Grp label="Grammar">
+        <div className="relative">
+          <Btn onClick={() => { setShowGrammar(!showGrammar); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); }} isActive={showGrammar} title="Grammar Check">
+            <span className="text-[11px] font-bold">ABC<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginLeft: "1px", verticalAlign: "super" }}><polyline points="20 6 9 17 4 12" /></svg></span>
+          </Btn>
+          {showGrammar && <GrammarCheck editor={editor} onClose={() => setShowGrammar(false)} />}
+        </div>
       </Grp>
       <Sep />
       {/* Export */}
@@ -746,6 +803,9 @@ export default function Editor({
   // ─── Find & Replace ───
   const [showFindReplace, setShowFindReplace] = useState(false);
 
+  // ─── Comments ───
+  const [comments, setComments] = useState<{ id: string; text: string; comment: string; from: number; to: number }[]>([]);
+
   // ─── Word Goal ───
   const [wordGoal, setWordGoal] = useState(0);
 
@@ -767,23 +827,37 @@ export default function Editor({
       Subscript,
       Superscript,
       CitationNode,
-      Image.configure({ inline: false, allowBase64: true }),
+      Image.configure({ inline: false, allowBase64: true, HTMLAttributes: { draggable: "true" } }),
       TableKit,
       Link.configure({ openOnClick: false, HTMLAttributes: { class: "editor-link" } }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Typography,
       CharacterCount,
+      Dropcursor.configure({ color: "var(--purple)", width: 2 }),
+      CommentMark,
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
       if (!initializedRef.current || swappingRef.current) return;
       contentChangeRef.current(e.getHTML());
     },
-    editorProps: { attributes: { class: "tiptap" } },
+    editorProps: { attributes: { class: "tiptap", spellcheck: "true" } },
   });
 
   editorRef.current = editor;
+
+  const handleAddComment = useCallback(() => {
+    if (!editor) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) { toast.error("Select text to comment on"); return; }
+    const selectedText = editor.state.doc.textBetween(from, to);
+    const comment = window.prompt("Add a comment:");
+    if (!comment) return;
+    const id = crypto.randomUUID();
+    editor.chain().focus().setMark("comment", { comment, id }).run();
+    setComments((prev) => [...prev, { id, text: selectedText, comment, from, to }]);
+  }, [editor]);
 
   // Set initial content once — deferred to avoid flushSync during render
   useEffect(() => {
@@ -1109,7 +1183,8 @@ export default function Editor({
           </button>
         </div>
 
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} />
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} onAddComment={handleAddComment} />
+        <TableToolbar editor={editor} />
         {showFindReplace && <FindReplaceBar editor={editor} onClose={() => setShowFindReplace(false)} />}
 
         {/* Paginated editor */}
@@ -1164,8 +1239,18 @@ export default function Editor({
 
           {/* Word count */}
           <div className="status-bar-item">
-            <span>{wordCount.toLocaleString()} words</span>
+            <span>{wordCount.toLocaleString()} words &middot; {charCount.toLocaleString()} chars</span>
           </div>
+
+          {comments.length > 0 && (
+            <>
+              <div className="w-px h-3" style={{ background: "var(--border)" }} />
+              <div className="status-bar-item">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                <span>{comments.length} comment{comments.length !== 1 ? "s" : ""}</span>
+              </div>
+            </>
+          )}
 
           <div className="flex-1" />
 
