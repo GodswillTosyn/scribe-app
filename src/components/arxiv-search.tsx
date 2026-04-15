@@ -87,7 +87,7 @@ export default function ArxivSearch() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
-            placeholder="Search arXiv papers..."
+            placeholder="Search academic papers..."
             className="flex-1 bg-transparent outline-none text-[12px] px-2 py-1.5"
             style={{ color: "var(--foreground)" }}
           />
@@ -117,8 +117,8 @@ export default function ArxivSearch() {
                 <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </div>
-            <p className="text-[11px] font-medium" style={{ color: "var(--foreground)" }}>Search arXiv</p>
-            <p className="text-[10px]" style={{ color: "var(--muted)" }}>Find research papers from the global academic archive</p>
+            <p className="text-[11px] font-medium" style={{ color: "var(--foreground)" }}>Search Papers</p>
+            <p className="text-[10px]" style={{ color: "var(--muted)" }}>Find research papers from millions of academic publications</p>
           </div>
         )}
 

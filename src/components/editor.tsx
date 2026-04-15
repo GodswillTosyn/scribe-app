@@ -446,7 +446,7 @@ function InspectorPanel({
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
         </button>
         {citations.length > 0 && <span className="text-[8px] font-bold px-1 rounded-full" style={{ background: "var(--purple)", color: "#fff" }}>{citations.length}</span>}
-        <button onClick={() => { onToggle(); setTab("arxiv"); }} title="Search arXiv" className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" style={{ color: "var(--purple)" }}
+        <button onClick={() => { onToggle(); setTab("arxiv"); }} title="Search Papers" className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors" style={{ color: "var(--purple)" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
         </button>
@@ -494,7 +494,7 @@ function InspectorPanel({
           style={{ color: tab === "arxiv" ? "var(--purple)" : "var(--muted)" }}
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-          arXiv
+          Papers
           {tab === "arxiv" && <div className="absolute bottom-0 left-2 right-2 h-0.5 rounded-full" style={{ background: "var(--purple)" }} />}
         </button>
         <button onClick={onToggle} className="flex items-center justify-center w-9 h-10 transition-colors" style={{ color: "var(--muted)" }}
@@ -1023,6 +1023,8 @@ export default function Editor({
       citationsChangeRef.current?.(next);
       return next;
     });
+    // Tell PDF viewer to remove the corresponding highlight
+    window.dispatchEvent(new CustomEvent("scribe:citation-deleted", { detail: id }));
   }, []);
 
   const handleExportWord = useCallback(() => {

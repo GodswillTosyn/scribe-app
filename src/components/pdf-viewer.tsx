@@ -20,7 +20,7 @@ export interface CitationPayload {
 
 interface PopoverState { x: number; y: number; payload: CitationPayload }
 interface SnapshotBox { startX: number; startY: number; endX: number; endY: number; pageNum: number }
-interface PdfHighlight { page: number; text: string }
+interface PdfHighlight { id: string; page: number; text: string }
 
 function getPageNumber(node: Node): number {
   let el: HTMLElement | null = node.nodeType === Node.ELEMENT_NODE ? (node as HTMLElement) : node.parentElement;
@@ -151,6 +151,8 @@ export default function PdfViewer({
 
   const handleCite = useCallback(() => {
     if (!popover) return;
+    // Auto-highlight the cited text on the PDF
+    setHighlights((prev) => [...prev, { id: popover.payload.id, page: popover.payload.page, text: popover.payload.text }]);
     onCite?.(popover.payload);
     setPopover(null);
     window.getSelection()?.removeAllRanges();
@@ -158,28 +160,40 @@ export default function PdfViewer({
 
   const handleHighlight = useCallback(() => {
     if (!popover) return;
-    const hl: PdfHighlight = { page: popover.payload.page, text: popover.payload.text };
+    const hl: PdfHighlight = { id: crypto.randomUUID(), page: popover.payload.page, text: popover.payload.text };
     setHighlights((prev) => [...prev, hl]);
     setPopover(null);
     window.getSelection()?.removeAllRanges();
   }, [popover]);
 
+  // Listen for citation deletion — remove corresponding highlight
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const citationId = (e as CustomEvent<string>).detail;
+      if (citationId) {
+        setHighlights((prev) => prev.filter((h) => h.id !== citationId));
+      }
+    };
+    window.addEventListener("scribe:citation-deleted", handler);
+    return () => window.removeEventListener("scribe:citation-deleted", handler);
+  }, []);
+
   // Apply highlights to textLayer spans
   useEffect(() => {
-    if (!containerRef.current || highlights.length === 0) return;
-    // Clear existing highlights
+    if (!containerRef.current) return;
+    // Clear all existing highlights
     containerRef.current.querySelectorAll(".scribe-highlight").forEach((el) => {
       (el as HTMLElement).style.background = "";
       el.classList.remove("scribe-highlight");
     });
-    // Apply
+    // Reapply current highlights
     for (const hl of highlights) {
       const pageEl = containerRef.current.querySelector(`[data-page-number="${hl.page}"]`);
       if (!pageEl) continue;
       const spans = pageEl.querySelectorAll(".textLayer span");
       for (const span of spans) {
-        const text = span.textContent || "";
-        if (text.length > 2 && hl.text.includes(text.trim())) {
+        const text = (span.textContent || "").trim();
+        if (text.length > 1 && hl.text.includes(text)) {
           (span as HTMLElement).style.background = "rgba(250,204,21,0.4)";
           span.classList.add("scribe-highlight");
         }
@@ -373,12 +387,6 @@ export default function PdfViewer({
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
               Cite
             </button>
-            <button onClick={handleHighlight} className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors"
-              style={{ color: "var(--foreground)" }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-              <span className="w-[13px] h-[13px] flex items-center justify-center text-[10px] font-bold rounded-sm" style={{ background: "rgba(250,204,21,0.5)" }}>A</span>
-              Highlight
-            </button>
             {/* Divider */}
             <div className="my-1 mx-3" style={{ borderTop: "1px solid var(--border)" }} />
             {/* AI actions */}
@@ -399,7 +407,7 @@ export default function PdfViewer({
               className="flex items-center gap-2.5 w-full px-3.5 py-2 text-[12px] font-medium transition-colors" style={{ color: "var(--foreground)" }}
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--purple)" }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-              Find Related
+              Find Papers
             </button>
           </div>
         </div>
