@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useEditor, EditorContent, Editor as TiptapEditor } from "@tiptap/react";
-import { Mark } from "@tiptap/core";
+import { Mark, Node as TiptapNode } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
@@ -114,6 +114,19 @@ const CommentMark = Mark.create({
   },
 });
 
+/* ─── Hard Page Break Extension ─── */
+const HardPageBreak = TiptapNode.create({
+  name: "hardPageBreak",
+  group: "block",
+  parseHTML() { return [{ tag: "div[data-page-break]" }]; },
+  renderHTML() { return ["div", { "data-page-break": "", class: "hard-page-break" }, 0]; },
+  addKeyboardShortcuts() {
+    return {
+      "Mod-Enter": () => this.editor.chain().focus().insertContent({ type: this.name }).insertContent({ type: "paragraph" }).run(),
+    };
+  },
+});
+
 /* ─── Table Toolbar (contextual, shown when cursor is in table) ─── */
 function TableToolbar({ editor }: { editor: TiptapEditor }) {
   if (!editor.isActive("table")) return null;
@@ -136,13 +149,14 @@ function TableToolbar({ editor }: { editor: TiptapEditor }) {
 }
 
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint, onAddComment }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void; onAddComment: () => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint, onAddComment, margins, onSetMargins }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void; onAddComment: () => void; margins: { top: number; right: number; bottom: number; left: number }; onSetMargins: (m: { top: number; right: number; bottom: number; left: number }) => void }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showColorMenu, setShowColorMenu] = useState(false);
   const [showSpecialChars, setShowSpecialChars] = useState(false);
   const [showGrammar, setShowGrammar] = useState(false);
+  const [showMargins, setShowMargins] = useState(false);
 
   const COLOR_PRESETS = [
     { label: "Black", value: "#000000" },
@@ -280,6 +294,9 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         <Btn onClick={() => editor.chain().focus().setTextAlign("right").run()} isActive={editor.isActive({ textAlign: "right" })} title="Right">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="9" y1="12" x2="21" y2="12" /><line x1="6" y1="18" x2="21" y2="18" /></svg>
         </Btn>
+        <Btn onClick={() => editor.chain().focus().setTextAlign("justify").run()} isActive={editor.isActive({ textAlign: "justify" })} title="Justify">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+        </Btn>
       </Grp>
       <Sep />
       {/* Indent / Outdent */}
@@ -308,6 +325,9 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         </Btn>
         <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="12" x2="22" y2="12" /></svg>
+        </Btn>
+        <Btn onClick={() => editor.chain().focus().insertContent({ type: "hardPageBreak" }).insertContent({ type: "paragraph" }).run()} title="Page Break (Ctrl+Enter)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-2 2 4 2-2h4" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
         </Btn>
         <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive("codeBlock")} title="Code Block">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
@@ -378,6 +398,42 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
             <span className="text-[11px] font-bold">ABC<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginLeft: "1px", verticalAlign: "super" }}><polyline points="20 6 9 17 4 12" /></svg></span>
           </Btn>
           {showGrammar && <GrammarCheck editor={editor} onClose={() => setShowGrammar(false)} />}
+        </div>
+      </Grp>
+      <Sep />
+      {/* Margins */}
+      <Grp label="Margins">
+        <div className="relative">
+          <Btn onClick={() => { setShowMargins(!showMargins); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); }} isActive={showMargins} title="Page Margins">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="7" y="7" width="10" height="10" rx="1" strokeDasharray="2 2" /></svg>
+          </Btn>
+          {showMargins && (
+            <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+              <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Margin presets</div>
+              {([
+                { label: "Normal (0.75\")", top: 72, right: 72, bottom: 72, left: 72 },
+                { label: "Narrow (0.5\")", top: 48, right: 48, bottom: 48, left: 48 },
+                { label: "Wide (1.25\" sides)", top: 72, right: 120, bottom: 72, left: 120 },
+              ] as const).map((preset) => (
+                <button key={preset.label} onClick={() => { onSetMargins({ top: preset.top, right: preset.right, bottom: preset.bottom, left: preset.left }); setShowMargins(false); }}
+                  className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  {preset.label}
+                </button>
+              ))}
+              <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
+              <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Custom (px)</div>
+              <div className="grid grid-cols-2 gap-1 px-3 py-1">
+                {(["top", "right", "bottom", "left"] as const).map((side) => (
+                  <label key={side} className="flex items-center gap-1 text-[10px]" style={{ color: "var(--muted)" }}>
+                    <span className="w-6 capitalize">{side[0].toUpperCase()}</span>
+                    <input type="number" value={margins[side]} onChange={(e) => onSetMargins({ ...margins, [side]: Math.max(0, parseInt(e.target.value) || 0) })}
+                      className="w-12 h-5 px-1 text-[10px] rounded border outline-none" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }} />
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </Grp>
       <Sep />
@@ -691,6 +747,79 @@ function FindReplaceBar({ editor, onClose }: { editor: TiptapEditor; onClose: ()
   );
 }
 
+/* ─── Ruler ─── */
+function Ruler({ leftMargin, rightMargin, pageWidth, onChangeMargins }: {
+  leftMargin: number; rightMargin: number; pageWidth: number;
+  onChangeMargins: (left: number, right: number) => void;
+}) {
+  const rulerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<"left" | "right" | null>(null);
+
+  const pxPerInch = 96;
+  const totalInches = pageWidth / pxPerInch;
+  const ticks: { pos: number; major: boolean; label?: string }[] = [];
+  for (let i = 0; i <= totalInches * 2; i++) {
+    const inch = i / 2;
+    const pos = inch * pxPerInch;
+    ticks.push({ pos, major: i % 2 === 0, label: i % 2 === 0 ? (inch > 0 ? String(inch) : undefined) : undefined });
+  }
+
+  const handleMouseDown = useCallback((side: "left" | "right") => (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragging(side);
+    const startX = e.clientX;
+    const startVal = side === "left" ? leftMargin : rightMargin;
+
+    const onMove = (ev: MouseEvent) => {
+      const delta = ev.clientX - startX;
+      const newVal = Math.max(0, Math.min(pageWidth / 2 - 20, side === "left" ? startVal + delta : startVal - delta));
+      onChangeMargins(
+        side === "left" ? newVal : leftMargin,
+        side === "right" ? newVal : rightMargin
+      );
+    };
+    const onUp = () => {
+      setDragging(null);
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  }, [leftMargin, rightMargin, pageWidth, onChangeMargins]);
+
+  return (
+    <div ref={rulerRef} className="ruler-bar" style={{ width: pageWidth, margin: "0 auto", position: "relative", height: 24, background: "var(--toolbar-bg)", borderBottom: "1px solid var(--border)", userSelect: "none", overflow: "hidden" }}>
+      {/* Tick marks */}
+      {ticks.map((t, i) => (
+        <div key={i} style={{ position: "absolute", left: t.pos, top: t.major ? 12 : 16, width: 1, height: t.major ? 12 : 8, background: "var(--muted)", opacity: 0.3 }} />
+      ))}
+      {/* Labels */}
+      {ticks.filter((t) => t.label).map((t, i) => (
+        <span key={`l-${i}`} style={{ position: "absolute", left: t.pos, top: 1, transform: "translateX(-50%)", fontSize: 8, color: "var(--muted)", opacity: 0.5, fontFamily: "Space Grotesk, system-ui, sans-serif" }}>{t.label}</span>
+      ))}
+      {/* Margin shading */}
+      <div style={{ position: "absolute", left: 0, top: 0, width: leftMargin, height: "100%", background: "var(--hover)", opacity: 0.5 }} />
+      <div style={{ position: "absolute", right: 0, top: 0, width: rightMargin, height: "100%", background: "var(--hover)", opacity: 0.5 }} />
+      {/* Left margin handle */}
+      <div
+        onMouseDown={handleMouseDown("left")}
+        style={{ position: "absolute", left: leftMargin - 5, top: 12, cursor: "ew-resize", zIndex: 2 }}
+        title="Left margin"
+      >
+        <svg width="10" height="12" viewBox="0 0 10 12"><polygon points="5,0 10,12 0,12" fill={dragging === "left" ? "var(--purple)" : "var(--purple-soft)"} /></svg>
+      </div>
+      {/* Right margin handle */}
+      <div
+        onMouseDown={handleMouseDown("right")}
+        style={{ position: "absolute", right: rightMargin - 5, top: 12, cursor: "ew-resize", zIndex: 2 }}
+        title="Right margin"
+      >
+        <svg width="10" height="12" viewBox="0 0 10 12"><polygon points="5,0 10,12 0,12" fill={dragging === "right" ? "var(--purple)" : "var(--purple-soft)"} /></svg>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Editor ─── */
 export default function Editor({
   projectId,
@@ -803,6 +932,20 @@ export default function Editor({
   // ─── Comments ───
   const [comments, setComments] = useState<{ id: string; text: string; comment: string; from: number; to: number }[]>([]);
 
+  // ─── Margins ───
+  const [marginLeft, setMarginLeft] = useState(72);
+  const [marginRight, setMarginRight] = useState(72);
+  const [marginTop, setMarginTop] = useState(72);
+  const [marginBottom, setMarginBottom] = useState(72);
+
+  const margins = { top: marginTop, right: marginRight, bottom: marginBottom, left: marginLeft };
+  const setMargins = useCallback((m: { top: number; right: number; bottom: number; left: number }) => {
+    setMarginTop(m.top);
+    setMarginRight(m.right);
+    setMarginBottom(m.bottom);
+    setMarginLeft(m.left);
+  }, []);
+
   // ─── Word Goal ───
   const [wordGoal, setWordGoal] = useState(0);
 
@@ -820,7 +963,7 @@ export default function Editor({
       Underline,
       TextStyleKit,
       Highlight.configure({ multicolor: true }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      TextAlign.configure({ types: ["heading", "paragraph"], alignments: ["left", "center", "right", "justify"] }),
       Subscript,
       Superscript,
       CitationNode,
@@ -833,6 +976,7 @@ export default function Editor({
       CharacterCount,
       Dropcursor.configure({ color: "var(--purple)", width: 2 }),
       CommentMark,
+      HardPageBreak,
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
@@ -1182,9 +1326,15 @@ export default function Editor({
           </button>
         </div>
 
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} onAddComment={handleAddComment} />
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} onAddComment={handleAddComment} margins={margins} onSetMargins={setMargins} />
         <TableToolbar editor={editor} />
         {showFindReplace && <FindReplaceBar editor={editor} onClose={() => setShowFindReplace(false)} />}
+
+        {/* Ruler */}
+        <Ruler leftMargin={marginLeft} rightMargin={marginRight} pageWidth={816} onChangeMargins={(left, right) => { setMarginLeft(left); setMarginRight(right); }} />
+
+        {/* Dynamic margin styles */}
+        <style>{`.editor-paginated-wrapper .tiptap { padding: ${marginTop}px ${marginRight}px ${marginBottom}px ${marginLeft}px !important; }`}</style>
 
         {/* Paginated editor */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>
