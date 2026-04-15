@@ -416,6 +416,41 @@ body {
   margin: 1.5rem 0;
 }
 
+/* Links in editor */
+.editor-link {
+  color: var(--purple);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.editor-link:hover {
+  opacity: 0.8;
+}
+
+/* Task lists */
+.tiptap ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.tiptap ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.tiptap ul[data-type="taskList"] li > label {
+  margin-top: 0.25rem;
+}
+.tiptap ul[data-type="taskList"] li > label input[type="checkbox"] {
+  accent-color: var(--purple);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+.tiptap ul[data-type="taskList"] li[data-checked="true"] > div > p {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
 /* Citation node styling — APA 7th edition block quote */
 .citation-node {
   border-left: 3px solid var(--purple);

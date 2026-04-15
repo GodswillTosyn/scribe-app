@@ -13,6 +13,11 @@ import Superscript from "@tiptap/extension-superscript";
 import { TableKit } from "@tiptap/extension-table";
 import { CitationNode } from "./citation-node";
 import Image from "@tiptap/extension-image";
+import Link from "@tiptap/extension-link";
+import TaskList from "@tiptap/extension-task-list";
+import TaskItem from "@tiptap/extension-task-item";
+import Typography from "@tiptap/extension-typography";
+import CharacterCount from "@tiptap/extension-character-count";
 import { motion, AnimatePresence } from "framer-motion";
 import type { CitationPayload } from "./pdf-viewer";
 import type { ChatMessage, CitationRecord, VersionSnapshot } from "@/lib/db";
@@ -92,10 +97,25 @@ const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", 
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
 /* ─── Toolbar ─── */
-function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void }) {
+function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHistory, onToggleFindReplace, onPrint }: { editor: TiptapEditor; onExportWord: () => void; onExportPdf: () => void; onGenerateRefs: () => void; onShowHistory: () => void; onToggleFindReplace: () => void; onPrint: () => void }) {
   const [showFontMenu, setShowFontMenu] = useState(false);
   const [showSizeMenu, setShowSizeMenu] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showColorMenu, setShowColorMenu] = useState(false);
+  const [showSpecialChars, setShowSpecialChars] = useState(false);
+
+  const COLOR_PRESETS = [
+    { label: "Black", value: "#000000" },
+    { label: "Red", value: "#dc2626" },
+    { label: "Blue", value: "#2563eb" },
+    { label: "Green", value: "#16a34a" },
+    { label: "Orange", value: "#ea580c" },
+    { label: "Purple", value: "#7c3aed" },
+    { label: "Gray", value: "#6b7280" },
+    { label: "Brown", value: "#92400e" },
+  ];
+
+  const SPECIAL_CHARS = ["—", "–", "…", "©", "®", "™", "§", "¶", "•", "°", "±", "×", "÷", "≈", "≠", "≤", "≥", "←", "→", "↑", "↓", "α", "β", "γ", "δ", "π", "σ"];
 
   const currentFont = (editor.getAttributes("textStyle").fontFamily as string) || "Space Grotesk";
   const currentSize = (editor.getAttributes("textStyle").fontSize as string) || "15px";
@@ -168,6 +188,47 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         </Btn>
       </Grp>
       <Sep />
+      {/* Link */}
+      <Grp label="Link">
+        <Btn onClick={() => {
+          if (editor.isActive("link")) {
+            editor.chain().focus().unsetLink().run();
+          } else {
+            const url = window.prompt("Enter URL:");
+            if (url) {
+              editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+            }
+          }
+        }} isActive={editor.isActive("link")} title="Link">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+        </Btn>
+      </Grp>
+      <Sep />
+      {/* Text Color */}
+      <Grp label="Color">
+        <div className="relative">
+          <Btn onClick={() => { setShowColorMenu(!showColorMenu); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowSpecialChars(false); }} title="Text Color">
+            <span className="text-[12px] font-bold" style={{ borderBottom: `3px solid ${(editor.getAttributes("textStyle").color as string) || "var(--foreground)"}` }}>A</span>
+          </Btn>
+          {showColorMenu && (
+            <div className="absolute top-full left-0 mt-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "148px" }}>
+              <div className="grid grid-cols-4 gap-1.5 mb-1.5">
+                {COLOR_PRESETS.map((c) => (
+                  <button key={c.value} onClick={() => { editor.chain().focus().setColor(c.value).run(); setShowColorMenu(false); }}
+                    className="w-7 h-7 rounded-md border transition-transform hover:scale-110 cursor-pointer" title={c.label}
+                    style={{ background: c.value, borderColor: "var(--border)" }} />
+                ))}
+              </div>
+              <button onClick={() => { editor.chain().focus().unsetColor().run(); setShowColorMenu(false); }}
+                className="w-full text-[10px] py-1 rounded transition-colors text-center" style={{ color: "var(--muted)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                Reset
+              </button>
+            </div>
+          )}
+        </div>
+      </Grp>
+      <Sep />
       {/* Align */}
       <Grp label="Align">
         <Btn onClick={() => editor.chain().focus().setTextAlign("left").run()} isActive={editor.isActive({ textAlign: "left" })} title="Left">
@@ -181,6 +242,16 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         </Btn>
       </Grp>
       <Sep />
+      {/* Indent / Outdent */}
+      <Grp label="Indent">
+        <Btn onClick={() => editor.chain().focus().sinkListItem("listItem").run()} title="Indent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /><line x1="3" y1="6" x2="3" y2="18" /></svg>
+        </Btn>
+        <Btn onClick={() => editor.chain().focus().liftListItem("listItem").run()} title="Outdent">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /><line x1="21" y1="6" x2="21" y2="18" /></svg>
+        </Btn>
+      </Grp>
+      <Sep />
       {/* Lists & Insert */}
       <Grp label="Insert">
         <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive("bulletList")} title="Bullet List">
@@ -188,6 +259,9 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         </Btn>
         <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive("orderedList")} title="Ordered List">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="10" y1="6" x2="21" y2="6" /><line x1="10" y1="12" x2="21" y2="12" /><line x1="10" y1="18" x2="21" y2="18" /><text x="2" y="8" fontSize="8" fill="currentColor" stroke="none">1</text><text x="2" y="14" fontSize="8" fill="currentColor" stroke="none">2</text><text x="2" y="20" fontSize="8" fill="currentColor" stroke="none">3</text></svg>
+        </Btn>
+        <Btn onClick={() => editor.chain().focus().toggleTaskList().run()} isActive={editor.isActive("taskList")} title="Task List">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="6" height="6" rx="1" /><polyline points="5 7.5 6 8.5 8.5 6" /><line x1="12" y1="8" x2="21" y2="8" /><rect x="3" y="13" width="6" height="6" rx="1" /><line x1="12" y1="16" x2="21" y2="16" /></svg>
         </Btn>
         <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} isActive={editor.isActive("blockquote")} title="Quote">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
@@ -199,6 +273,33 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
         </Btn>
         <TablePicker onInsert={(rows, cols) => editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()} />
+        {/* Special Characters */}
+        <div className="relative">
+          <Btn onClick={() => { setShowSpecialChars(!showSpecialChars); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); }} isActive={showSpecialChars} title="Special Characters">
+            <span className="text-[12px] font-bold">&Omega;</span>
+          </Btn>
+          {showSpecialChars && (
+            <div className="absolute top-full left-0 mt-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "200px" }}>
+              <div className="grid grid-cols-9 gap-0.5">
+                {SPECIAL_CHARS.map((ch) => (
+                  <button key={ch} onClick={() => { editor.chain().focus().insertContent(ch).run(); setShowSpecialChars(false); }}
+                    className="w-5 h-5 flex items-center justify-center rounded text-[12px] transition-colors cursor-pointer"
+                    style={{ color: "var(--foreground)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                    {ch}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </Grp>
+      <Sep />
+      {/* Find & Replace */}
+      <Grp label="Find">
+        <Btn onClick={onToggleFindReplace} title="Find & Replace">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+        </Btn>
       </Grp>
       <Sep />
       {/* Undo/Redo */}
@@ -240,6 +341,11 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
               <button onClick={() => { onExportPdf(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
                 <span style={{ color: "#ef4444" }}>P</span> PDF (.pdf)
+              </button>
+              <button onClick={() => { onPrint(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+                Print
               </button>
             </div>
           )}
@@ -391,6 +497,146 @@ function InspectorPanel({
   );
 }
 
+/* ─── Find & Replace Bar ─── */
+function FindReplaceBar({ editor, onClose }: { editor: TiptapEditor; onClose: () => void }) {
+  const [findQuery, setFindQuery] = useState("");
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [matchCount, setMatchCount] = useState(0);
+  const [currentMatch, setCurrentMatch] = useState(0);
+
+  const clearHighlights = useCallback(() => {
+    const el = document.querySelector(".tiptap") as HTMLElement | null;
+    if (!el) return;
+    el.querySelectorAll("mark[data-find-highlight]").forEach((m) => {
+      const parent = m.parentNode;
+      if (parent) {
+        parent.replaceChild(document.createTextNode(m.textContent || ""), m);
+        parent.normalize();
+      }
+    });
+  }, []);
+
+  const highlightMatches = useCallback((query: string) => {
+    clearHighlights();
+    if (!query) { setMatchCount(0); setCurrentMatch(0); return; }
+    const el = document.querySelector(".tiptap") as HTMLElement | null;
+    if (!el) return;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const textNodes: Text[] = [];
+    let node: Text | null;
+    while ((node = walker.nextNode() as Text | null)) textNodes.push(node);
+    let count = 0;
+    const lowerQ = query.toLowerCase();
+    for (const tn of textNodes) {
+      const text = tn.textContent || "";
+      const lowerText = text.toLowerCase();
+      if (!lowerText.includes(lowerQ)) continue;
+      const frag = document.createDocumentFragment();
+      let lastIdx = 0;
+      let idx = lowerText.indexOf(lowerQ, 0);
+      while (idx !== -1) {
+        if (idx > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, idx)));
+        const mark = document.createElement("mark");
+        mark.setAttribute("data-find-highlight", "true");
+        mark.style.background = "rgba(250,204,21,0.5)";
+        mark.style.borderRadius = "2px";
+        mark.textContent = text.slice(idx, idx + query.length);
+        frag.appendChild(mark);
+        count++;
+        lastIdx = idx + query.length;
+        idx = lowerText.indexOf(lowerQ, lastIdx);
+      }
+      if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+      tn.parentNode?.replaceChild(frag, tn);
+    }
+    setMatchCount(count);
+    setCurrentMatch(count > 0 ? 1 : 0);
+  }, [clearHighlights]);
+
+  const goToMatch = useCallback((idx: number) => {
+    const marks = document.querySelectorAll("mark[data-find-highlight]");
+    if (marks.length === 0) return;
+    marks.forEach((m) => ((m as HTMLElement).style.background = "rgba(250,204,21,0.5)"));
+    const target = marks[idx - 1] as HTMLElement | undefined;
+    if (target) {
+      target.style.background = "rgba(234,88,12,0.6)";
+      target.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, []);
+
+  const handleNext = useCallback(() => {
+    if (matchCount === 0) return;
+    const next = currentMatch >= matchCount ? 1 : currentMatch + 1;
+    setCurrentMatch(next);
+    goToMatch(next);
+  }, [currentMatch, matchCount, goToMatch]);
+
+  const handlePrev = useCallback(() => {
+    if (matchCount === 0) return;
+    const prev = currentMatch <= 1 ? matchCount : currentMatch - 1;
+    setCurrentMatch(prev);
+    goToMatch(prev);
+  }, [currentMatch, matchCount, goToMatch]);
+
+  const handleReplace = useCallback(() => {
+    if (matchCount === 0 || !findQuery) return;
+    const marks = document.querySelectorAll("mark[data-find-highlight]");
+    const target = marks[currentMatch - 1];
+    if (target) {
+      target.replaceWith(document.createTextNode(replaceQuery));
+      // Re-sync editor content from DOM
+      const el = document.querySelector(".tiptap") as HTMLElement | null;
+      if (el) editor.commands.setContent(el.innerHTML);
+      highlightMatches(findQuery);
+    }
+  }, [editor, findQuery, replaceQuery, currentMatch, matchCount, highlightMatches]);
+
+  const handleReplaceAll = useCallback(() => {
+    if (matchCount === 0 || !findQuery) return;
+    const marks = document.querySelectorAll("mark[data-find-highlight]");
+    marks.forEach((m) => m.replaceWith(document.createTextNode(replaceQuery)));
+    const el = document.querySelector(".tiptap") as HTMLElement | null;
+    if (el) editor.commands.setContent(el.innerHTML);
+    setMatchCount(0);
+    setCurrentMatch(0);
+  }, [editor, findQuery, replaceQuery, matchCount]);
+
+  const handleClose = useCallback(() => {
+    clearHighlights();
+    onClose();
+  }, [clearHighlights, onClose]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") handleClose(); };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [handleClose]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => highlightMatches(findQuery), 200);
+    return () => clearTimeout(timer);
+  }, [findQuery, highlightMatches]);
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-1.5 border-b shrink-0" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
+      <input value={findQuery} onChange={(e) => setFindQuery(e.target.value)} placeholder="Find..." className="h-6 px-2 text-[11px] rounded border outline-none w-36" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
+        onKeyDown={(e) => { if (e.key === "Enter") handleNext(); }} autoFocus />
+      <span className="text-[10px] tabular-nums" style={{ color: "var(--muted)" }}>{matchCount > 0 ? `${currentMatch}/${matchCount}` : "0"}</span>
+      <Btn onClick={handlePrev} title="Previous"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg></Btn>
+      <Btn onClick={handleNext} title="Next"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 6 15 12 9 18" /></svg></Btn>
+      <div className="w-px h-4" style={{ background: "var(--border)" }} />
+      <input value={replaceQuery} onChange={(e) => setReplaceQuery(e.target.value)} placeholder="Replace..." className="h-6 px-2 text-[11px] rounded border outline-none w-36" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }}
+        onKeyDown={(e) => { if (e.key === "Enter") handleReplace(); }} />
+      <Btn onClick={handleReplace} title="Replace"><span className="text-[10px]">Replace</span></Btn>
+      <Btn onClick={handleReplaceAll} title="Replace All"><span className="text-[10px]">All</span></Btn>
+      <div className="flex-1" />
+      <Btn onClick={handleClose} title="Close">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      </Btn>
+    </div>
+  );
+}
+
 /* ─── Editor ─── */
 export default function Editor({
   projectId,
@@ -497,6 +743,9 @@ export default function Editor({
   const [showVersionHistory, setShowVersionHistory] = useState(false);
   const lastSavedContentRef = useRef(initialContent);
 
+  // ─── Find & Replace ───
+  const [showFindReplace, setShowFindReplace] = useState(false);
+
   // ─── Word Goal ───
   const [wordGoal, setWordGoal] = useState(0);
 
@@ -520,6 +769,11 @@ export default function Editor({
       CitationNode,
       Image.configure({ inline: false, allowBase64: true }),
       TableKit,
+      Link.configure({ openOnClick: false, HTMLAttributes: { class: "editor-link" } }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Typography,
+      CharacterCount,
     ],
     content: "",
     onUpdate: ({ editor: e }) => {
@@ -707,6 +961,17 @@ export default function Editor({
     exportToPdf(editor.getHTML(), projectName);
   }, [editor, projectName]);
 
+  const handlePrint = useCallback(() => {
+    if (!editor) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>${projectName}</title><style>body{font-family:"Space Grotesk",system-ui,sans-serif;padding:40px;max-width:800px;margin:0 auto;font-size:15px;line-height:1.75}h1{font-size:1.875rem;font-weight:700}h2{font-size:1.375rem;font-weight:600}h3{font-size:1.125rem;font-weight:600}blockquote{border-left:3px solid #6D28D9;padding-left:1rem;color:#71717a}table{border-collapse:collapse;width:100%}th,td{border:1px solid #E8E8E8;padding:0.5rem 0.75rem;text-align:left}th{background:#FAFAFA;font-weight:600}ul[data-type="taskList"]{list-style:none;padding-left:0}ul[data-type="taskList"] li{display:flex;align-items:flex-start;gap:0.5rem}</style></head><body>${editor.getHTML()}</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  }, [editor, projectName]);
+
   // Generate APA reference list from citations
   const generateReferenceList = useCallback(() => {
     if (!editor || citations.length === 0) return;
@@ -844,7 +1109,8 @@ export default function Editor({
           </button>
         </div>
 
-        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} />
+        <Toolbar editor={editor} onExportWord={handleExportWord} onExportPdf={handleExportPdf} onGenerateRefs={generateReferenceList} onShowHistory={() => setShowVersionHistory(true)} onToggleFindReplace={() => setShowFindReplace(!showFindReplace)} onPrint={handlePrint} />
+        {showFindReplace && <FindReplaceBar editor={editor} onClose={() => setShowFindReplace(false)} />}
 
         {/* Paginated editor */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>

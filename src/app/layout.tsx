@@ -5,6 +5,7 @@ import "@fontsource/space-grotesk/600.css";
 import "@fontsource/space-grotesk/700.css";
 import "./globals.css";
 import ToastProvider from "@/components/toast-provider";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Scribe | AI-Powered Research Environment",
@@ -34,6 +35,7 @@ export default function RootLayout({
       <body className="h-screen overflow-hidden">
         {children}
         <ToastProvider />
+        <Analytics />
       </body>
     </html>
   );
