@@ -383,6 +383,7 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
   const [showSpecialChars, setShowSpecialChars] = useState(false);
   const [showGrammar, setShowGrammar] = useState(false);
   const [showMargins, setShowMargins] = useState(false);
+  const [showInsertMenu, setShowInsertMenu] = useState(false);
 
   const COLOR_PRESETS = [
     { label: "Black", value: "#000000" },
@@ -400,305 +401,354 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
   const currentFont = (editor.getAttributes("textStyle").fontFamily as string) || "Space Grotesk";
   const currentSize = (editor.getAttributes("textStyle").fontSize as string) || "15px";
 
+  const insertMenuBtnStyle = { color: "var(--foreground)", background: "transparent" };
+
   return (
-    <div className="editor-toolbar flex items-center gap-0.5 px-2 py-1.5 border-b shrink-0 flex-wrap" style={{ borderColor: "var(--border)", background: "var(--toolbar-bg)" }}>
-      {/* Font family */}
-      <Grp label="Font">
-        <div className="relative">
-          <button onClick={() => { setShowFontMenu(!showFontMenu); setShowSizeMenu(false); setShowExportMenu(false); }}
-            className="flex items-center gap-1 h-7 px-2 rounded text-[11px] transition-colors"
-            style={{ color: "var(--foreground)", background: showFontMenu ? "var(--hover)" : "transparent" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => { if (!showFontMenu) e.currentTarget.style.background = "transparent"; }}>
-            <span className="truncate max-w-[80px]">{currentFont}</span>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-          </button>
-          {showFontMenu && (
-            <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
-              {FONTS.map((f) => (
-                <button key={f} onClick={() => { editor.chain().focus().setFontFamily(f).run(); setShowFontMenu(false); }}
-                  className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ fontFamily: f, color: "var(--foreground)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                  {f}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Font size */}
-        <div className="relative">
-          <button onClick={() => { setShowSizeMenu(!showSizeMenu); setShowFontMenu(false); setShowExportMenu(false); }}
-            className="flex items-center gap-1 h-7 px-2 rounded text-[11px] transition-colors"
-            style={{ color: "var(--foreground)", background: showSizeMenu ? "var(--hover)" : "transparent" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => { if (!showSizeMenu) e.currentTarget.style.background = "transparent"; }}>
-            {parseInt(currentSize) || 15}
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-          </button>
-          {showSizeMenu && (
-            <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-20" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
-              {FONT_SIZES.map((s) => (
-                <button key={s} onClick={() => { editor.chain().focus().setFontSize(s).run(); setShowSizeMenu(false); }}
-                  className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                  {parseInt(s)}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </Grp>
-      <Sep />
-      {/* Styles */}
-      <Grp label="Styles">
-        <Btn onClick={() => editor.chain().focus().setParagraph().run()} isActive={editor.isActive("paragraph") && !editor.isActive("heading")} title="Normal">P</Btn>
-        <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive("heading", { level: 1 })} title="H1">H1</Btn>
-        <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive("heading", { level: 2 })} title="H2">H2</Btn>
-        <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} isActive={editor.isActive("heading", { level: 3 })} title="H3">H3</Btn>
-      </Grp>
-      <Sep />
-      {/* Format */}
-      <Grp label="Format">
-        <Btn onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive("bold")} title="Bold"><strong>B</strong></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive("italic")} title="Italic"><em className="font-serif">I</em></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} isActive={editor.isActive("underline")} title="Underline"><u>U</u></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleStrike().run()} isActive={editor.isActive("strike")} title="Strike"><s>S</s></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleSubscript().run()} isActive={editor.isActive("subscript")} title="Subscript"><span className="text-[10px]">X<sub>2</sub></span></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleSuperscript().run()} isActive={editor.isActive("superscript")} title="Superscript"><span className="text-[10px]">X<sup>2</sup></span></Btn>
-        <Btn onClick={() => editor.chain().focus().toggleHighlight().run()} isActive={editor.isActive("highlight")} title="Highlight">
-          <span className="text-[11px] px-0.5" style={{ background: "rgba(250,204,21,0.4)", borderRadius: "2px" }}>A</span>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Link */}
-      <Grp label="Link">
-        <Btn onClick={() => {
-          if (editor.isActive("link")) {
-            editor.chain().focus().unsetLink().run();
-          } else {
-            const url = window.prompt("Enter URL:");
-            if (url) {
-              editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
-            }
-          }
-        }} isActive={editor.isActive("link")} title="Link">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Text Color */}
-      <Grp label="Color">
-        <div className="relative">
-          <Btn onClick={() => { setShowColorMenu(!showColorMenu); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowSpecialChars(false); }} title="Text Color">
-            <span className="text-[12px] font-bold" style={{ borderBottom: `3px solid ${(editor.getAttributes("textStyle").color as string) || "var(--foreground)"}` }}>A</span>
+    <div className="editor-ribbon shrink-0">
+      {/* ── Row 1: Primary — most-used formatting tools ── */}
+      <div className="editor-ribbon-row1 editor-toolbar">
+        {/* Undo / Redo */}
+        <Grp label="Undo">
+          <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
           </Btn>
-          {showColorMenu && (
-            <div className="absolute top-full left-0 mt-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "148px" }}>
-              <div className="grid grid-cols-4 gap-1.5 mb-1.5">
-                {COLOR_PRESETS.map((c) => (
-                  <button key={c.value} onClick={() => { editor.chain().focus().setColor(c.value).run(); setShowColorMenu(false); }}
-                    className="w-7 h-7 rounded-md border transition-transform hover:scale-110 cursor-pointer" title={c.label}
-                    style={{ background: c.value, borderColor: "var(--border)" }} />
-                ))}
-              </div>
-              <button onClick={() => { editor.chain().focus().unsetColor().run(); setShowColorMenu(false); }}
-                className="w-full text-[10px] py-1 rounded transition-colors text-center" style={{ color: "var(--muted)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                Reset
-              </button>
-            </div>
-          )}
-        </div>
-      </Grp>
-      <Sep />
-      {/* Align */}
-      <Grp label="Align">
-        <Btn onClick={() => editor.chain().focus().setTextAlign("left").run()} isActive={editor.isActive({ textAlign: "left" })} title="Left">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="15" y2="12" /><line x1="3" y1="18" x2="18" y2="18" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().setTextAlign("center").run()} isActive={editor.isActive({ textAlign: "center" })} title="Center">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().setTextAlign("right").run()} isActive={editor.isActive({ textAlign: "right" })} title="Right">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="9" y1="12" x2="21" y2="12" /><line x1="6" y1="18" x2="21" y2="18" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().setTextAlign("justify").run()} isActive={editor.isActive({ textAlign: "justify" })} title="Justify">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Indent / Outdent */}
-      <Grp label="Indent">
-        <Btn onClick={() => editor.chain().focus().sinkListItem("listItem").run()} title="Indent">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /><line x1="3" y1="6" x2="3" y2="18" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().liftListItem("listItem").run()} title="Outdent">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /><line x1="21" y1="6" x2="21" y2="18" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Line Spacing */}
-      <LineSpacingPicker editor={editor} />
-      <Sep />
-      {/* Lists & Insert */}
-      <Grp label="Insert">
-        <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive("bulletList")} title="Bullet List">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" fill="currentColor" /><circle cx="4" cy="12" r="1" fill="currentColor" /><circle cx="4" cy="18" r="1" fill="currentColor" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive("orderedList")} title="Ordered List">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="10" y1="6" x2="21" y2="6" /><line x1="10" y1="12" x2="21" y2="12" /><line x1="10" y1="18" x2="21" y2="18" /><text x="2" y="8" fontSize="8" fill="currentColor" stroke="none">1</text><text x="2" y="14" fontSize="8" fill="currentColor" stroke="none">2</text><text x="2" y="20" fontSize="8" fill="currentColor" stroke="none">3</text></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleTaskList().run()} isActive={editor.isActive("taskList")} title="Task List">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="6" height="6" rx="1" /><polyline points="5 7.5 6 8.5 8.5 6" /><line x1="12" y1="8" x2="21" y2="8" /><rect x="3" y="13" width="6" height="6" rx="1" /><line x1="12" y1="16" x2="21" y2="16" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleBlockquote().run()} isActive={editor.isActive("blockquote")} title="Quote">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="12" x2="22" y2="12" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().insertContent("<div data-page-break=\"true\"></div><p></p>").run()} title="Insert Page Break (Ctrl+Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /><line x1="3" y1="12" x2="8" y2="12" /><line x1="16" y1="12" x2="21" y2="12" /><polyline points="10 10 12 12 14 10" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive("codeBlock")} title="Code Block">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
-        </Btn>
-        <TablePicker onInsert={(rows, cols) => editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run()} />
-        {/* Special Characters */}
-        <div className="relative">
-          <Btn onClick={() => { setShowSpecialChars(!showSpecialChars); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); }} isActive={showSpecialChars} title="Special Characters">
-            <span className="text-[12px] font-bold">&Omega;</span>
+          <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" /></svg>
           </Btn>
-          {showSpecialChars && (
-            <div className="absolute top-full left-0 mt-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "200px" }}>
-              <div className="grid grid-cols-9 gap-0.5">
-                {SPECIAL_CHARS.map((ch) => (
-                  <button key={ch} onClick={() => { editor.chain().focus().insertContent(ch).run(); setShowSpecialChars(false); }}
-                    className="w-5 h-5 flex items-center justify-center rounded text-[12px] transition-colors cursor-pointer"
-                    style={{ color: "var(--foreground)" }}
+        </Grp>
+        <Sep />
+        {/* Font family */}
+        <Grp label="Font">
+          <div className="relative">
+            <button onClick={() => { setShowFontMenu(!showFontMenu); setShowSizeMenu(false); setShowExportMenu(false); }}
+              className="flex items-center gap-1 h-7 px-2 rounded text-[11px] transition-colors"
+              style={{ color: "var(--foreground)", background: showFontMenu ? "var(--hover)" : "transparent" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => { if (!showFontMenu) e.currentTarget.style.background = "transparent"; }}>
+              <span className="truncate max-w-[80px]">{currentFont}</span>
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            {showFontMenu && (
+              <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+                {FONTS.map((f) => (
+                  <button key={f} onClick={() => { editor.chain().focus().setFontFamily(f).run(); setShowFontMenu(false); }}
+                    className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ fontFamily: f, color: "var(--foreground)" }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                    {ch}
+                    {f}
                   </button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      </Grp>
-      <Sep />
-      {/* Find & Replace */}
-      <Grp label="Find">
-        <Btn onClick={onToggleFindReplace} title="Find & Replace">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Undo/Redo */}
-      <Grp label="History">
-        <Btn onClick={() => editor.chain().focus().undo().run()} title="Undo">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
-        </Btn>
-        <Btn onClick={() => editor.chain().focus().redo().run()} title="Redo">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" /></svg>
-        </Btn>
-        <Btn onClick={onShowHistory} title="Version History">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* References */}
-      <Grp label="Refs">
-        <Btn onClick={onGenerateRefs} title="Generate Reference List">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
-          </svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Comment */}
-      <Grp label="Comment">
-        <Btn onClick={onAddComment} isActive={editor.isActive("comment")} title="Add Comment">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-        </Btn>
-      </Grp>
-      <Sep />
-      {/* Grammar Check */}
-      <Grp label="Grammar">
-        <div className="relative">
-          <Btn onClick={() => { setShowGrammar(!showGrammar); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); }} isActive={showGrammar} title="Grammar Check">
-            <span className="text-[11px] font-bold">ABC<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginLeft: "1px", verticalAlign: "super" }}><polyline points="20 6 9 17 4 12" /></svg></span>
-          </Btn>
-          {showGrammar && <GrammarCheck editor={editor} onClose={() => setShowGrammar(false)} />}
-        </div>
-      </Grp>
-      <Sep />
-      {/* Margins */}
-      <Grp label="Margins">
-        <div className="relative">
-          <Btn onClick={() => { setShowMargins(!showMargins); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); }} isActive={showMargins} title="Page Margins">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="7" y="7" width="10" height="10" rx="1" strokeDasharray="2 2" /></svg>
-          </Btn>
-          {showMargins && (
-            <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
-              <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Margin presets</div>
-              {([
-                { label: "Normal (1\")", top: 96, right: 96, bottom: 96, left: 96 },
-                { label: "Narrow (0.5\")", top: 48, right: 48, bottom: 48, left: 48 },
-                { label: "Moderate (0.75\")", top: 72, right: 72, bottom: 72, left: 72 },
-                { label: "Wide (1.25\" sides)", top: 96, right: 120, bottom: 96, left: 120 },
-              ] as const).map((preset) => (
-                <button key={preset.label} onClick={() => { onSetMargins({ top: preset.top, right: preset.right, bottom: preset.bottom, left: preset.left }); setShowMargins(false); }}
-                  className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                  {preset.label}
-                </button>
-              ))}
-              <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
-              <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Custom (px)</div>
-              <div className="grid grid-cols-2 gap-1 px-3 py-1">
-                {(["top", "right", "bottom", "left"] as const).map((side) => (
-                  <label key={side} className="flex items-center gap-1 text-[10px]" style={{ color: "var(--muted)" }}>
-                    <span className="w-6 capitalize">{side[0].toUpperCase()}</span>
-                    <input type="number" value={margins[side]} onChange={(e) => onSetMargins({ ...margins, [side]: Math.max(0, parseInt(e.target.value) || 0) })}
-                      className="w-12 h-5 px-1 text-[10px] rounded border outline-none" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }} />
-                  </label>
+            )}
+          </div>
+          {/* Font size */}
+          <div className="relative">
+            <button onClick={() => { setShowSizeMenu(!showSizeMenu); setShowFontMenu(false); setShowExportMenu(false); }}
+              className="flex items-center gap-1 h-7 px-2 rounded text-[11px] transition-colors"
+              style={{ color: "var(--foreground)", background: showSizeMenu ? "var(--hover)" : "transparent" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => { if (!showSizeMenu) e.currentTarget.style.background = "transparent"; }}>
+              {parseInt(currentSize) || 15}
+              <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            </button>
+            {showSizeMenu && (
+              <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-20" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+                {FONT_SIZES.map((s) => (
+                  <button key={s} onClick={() => { editor.chain().focus().setFontSize(s).run(); setShowSizeMenu(false); }}
+                    className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                    {parseInt(s)}
+                  </button>
                 ))}
               </div>
-            </div>
-          )}
-        </div>
-      </Grp>
-      <Sep />
-      {/* Export */}
-      <Grp label="Export">
-        <div className="relative">
-          <Btn onClick={() => { setShowExportMenu(!showExportMenu); setShowFontMenu(false); setShowSizeMenu(false); }} title="Download">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+            )}
+          </div>
+        </Grp>
+        <Sep />
+        {/* B I U S */}
+        <Grp label="Format">
+          <Btn onClick={() => editor.chain().focus().toggleBold().run()} isActive={editor.isActive("bold")} title="Bold"><strong>B</strong></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleItalic().run()} isActive={editor.isActive("italic")} title="Italic"><em className="font-serif">I</em></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleUnderline().run()} isActive={editor.isActive("underline")} title="Underline"><u>U</u></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleStrike().run()} isActive={editor.isActive("strike")} title="Strike"><s>S</s></Btn>
+        </Grp>
+        <Sep />
+        {/* Text Color + Highlight */}
+        <Grp label="Color">
+          <div className="relative">
+            <Btn onClick={() => { setShowColorMenu(!showColorMenu); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowSpecialChars(false); }} title="Text Color">
+              <span className="text-[12px] font-bold" style={{ borderBottom: `3px solid ${(editor.getAttributes("textStyle").color as string) || "var(--foreground)"}` }}>A</span>
+            </Btn>
+            {showColorMenu && (
+              <div className="absolute top-full left-0 mt-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "148px" }}>
+                <div className="grid grid-cols-4 gap-1.5 mb-1.5">
+                  {COLOR_PRESETS.map((c) => (
+                    <button key={c.value} onClick={() => { editor.chain().focus().setColor(c.value).run(); setShowColorMenu(false); }}
+                      className="w-7 h-7 rounded-md border transition-transform hover:scale-110 cursor-pointer" title={c.label}
+                      style={{ background: c.value, borderColor: "var(--border)" }} />
+                  ))}
+                </div>
+                <button onClick={() => { editor.chain().focus().unsetColor().run(); setShowColorMenu(false); }}
+                  className="w-full text-[10px] py-1 rounded transition-colors text-center" style={{ color: "var(--muted)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  Reset
+                </button>
+              </div>
+            )}
+          </div>
+          <Btn onClick={() => editor.chain().focus().toggleHighlight().run()} isActive={editor.isActive("highlight")} title="Highlight">
+            <span className="text-[11px] px-0.5" style={{ background: "rgba(250,204,21,0.4)", borderRadius: "2px" }}>A</span>
+          </Btn>
+        </Grp>
+        <Sep />
+        {/* Align */}
+        <Grp label="Align">
+          <Btn onClick={() => editor.chain().focus().setTextAlign("left").run()} isActive={editor.isActive({ textAlign: "left" })} title="Left">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="15" y2="12" /><line x1="3" y1="18" x2="18" y2="18" /></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().setTextAlign("center").run()} isActive={editor.isActive({ textAlign: "center" })} title="Center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="6" y1="12" x2="18" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().setTextAlign("right").run()} isActive={editor.isActive({ textAlign: "right" })} title="Right">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="9" y1="12" x2="21" y2="12" /><line x1="6" y1="18" x2="21" y2="18" /></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().setTextAlign("justify").run()} isActive={editor.isActive({ textAlign: "justify" })} title="Justify">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+          </Btn>
+        </Grp>
+        <Sep />
+        {/* Lists + Indent/Outdent */}
+        <Grp label="Lists">
+          <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive("bulletList")} title="Bullet List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><circle cx="4" cy="6" r="1" fill="currentColor" /><circle cx="4" cy="12" r="1" fill="currentColor" /><circle cx="4" cy="18" r="1" fill="currentColor" /></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().toggleOrderedList().run()} isActive={editor.isActive("orderedList")} title="Ordered List">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="10" y1="6" x2="21" y2="6" /><line x1="10" y1="12" x2="21" y2="12" /><line x1="10" y1="18" x2="21" y2="18" /><text x="2" y="8" fontSize="8" fill="currentColor" stroke="none">1</text><text x="2" y="14" fontSize="8" fill="currentColor" stroke="none">2</text><text x="2" y="20" fontSize="8" fill="currentColor" stroke="none">3</text></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().sinkListItem("listItem").run()} title="Indent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 6 15 12 9 18" /><line x1="3" y1="6" x2="3" y2="18" /></svg>
+          </Btn>
+          <Btn onClick={() => editor.chain().focus().liftListItem("listItem").run()} title="Outdent">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 6 9 12 15 18" /><line x1="21" y1="6" x2="21" y2="18" /></svg>
+          </Btn>
+        </Grp>
+        <Sep />
+        {/* Line Spacing */}
+        <LineSpacingPicker editor={editor} />
+        <Sep />
+        {/* Link */}
+        <Grp label="Link">
+          <Btn onClick={() => {
+            if (editor.isActive("link")) {
+              editor.chain().focus().unsetLink().run();
+            } else {
+              const url = window.prompt("Enter URL:");
+              if (url) {
+                editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+              }
+            }
+          }} isActive={editor.isActive("link")} title="Link">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></svg>
+          </Btn>
+        </Grp>
+      </div>
+
+      {/* ── Row 2: Secondary — less frequent tools ── */}
+      <div className="editor-ribbon-row2">
+        {/* Heading styles */}
+        <Grp label="Styles">
+          <Btn onClick={() => editor.chain().focus().setParagraph().run()} isActive={editor.isActive("paragraph") && !editor.isActive("heading")} title="Normal">P</Btn>
+          <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive("heading", { level: 1 })} title="H1">H1</Btn>
+          <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} isActive={editor.isActive("heading", { level: 2 })} title="H2">H2</Btn>
+          <Btn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} isActive={editor.isActive("heading", { level: 3 })} title="H3">H3</Btn>
+        </Grp>
+        <Sep />
+        {/* Subscript / Superscript */}
+        <Grp label="Script">
+          <Btn onClick={() => editor.chain().focus().toggleSubscript().run()} isActive={editor.isActive("subscript")} title="Subscript"><span className="text-[10px]">X<sub>2</sub></span></Btn>
+          <Btn onClick={() => editor.chain().focus().toggleSuperscript().run()} isActive={editor.isActive("superscript")} title="Superscript"><span className="text-[10px]">X<sup>2</sup></span></Btn>
+        </Grp>
+        <Sep />
+        {/* Insert dropdown */}
+        <Grp label="Insert">
+          <div className="relative">
+            <Btn onClick={() => { setShowInsertMenu(!showInsertMenu); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); }} isActive={showInsertMenu} title="Insert">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </Btn>
+            {showInsertMenu && (
+              <div className="absolute top-full left-0 mt-1 py-1 rounded-xl shadow-lg border z-50 w-48" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+                <div className="px-3 py-1 text-[9px] font-semibold uppercase tracking-wider" style={{ color: "var(--muted)" }}>Insert</div>
+                <button onClick={() => { editor.chain().focus().toggleTaskList().run(); setShowInsertMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="5" width="6" height="6" rx="1" /><polyline points="5 7.5 6 8.5 8.5 6" /><line x1="12" y1="8" x2="21" y2="8" /><rect x="3" y="13" width="6" height="6" rx="1" /><line x1="12" y1="16" x2="21" y2="16" /></svg>
+                  Task List
+                </button>
+                <button onClick={() => { editor.chain().focus().toggleBlockquote().run(); setShowInsertMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z" /><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3z" /></svg>
+                  Blockquote
+                </button>
+                <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
+                <button onClick={() => { setShowInsertMenu(false); }} className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}>
+                  <TablePicker onInsert={(rows, cols) => { editor.chain().focus().insertTable({ rows, cols, withHeaderRow: true }).run(); setShowInsertMenu(false); }} />
+                  <span className="ml-[-4px]">Table...</span>
+                </button>
+                <button onClick={() => { editor.chain().focus().insertContent("<div data-page-break=\"true\"></div><p></p>").run(); setShowInsertMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /><line x1="3" y1="12" x2="8" y2="12" /><line x1="16" y1="12" x2="21" y2="12" /><polyline points="10 10 12 12 14 10" /></svg>
+                  Page Break
+                </button>
+                <button onClick={() => { editor.chain().focus().setHorizontalRule().run(); setShowInsertMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="12" x2="22" y2="12" /></svg>
+                  Horizontal Rule
+                </button>
+                <button onClick={() => { editor.chain().focus().toggleCodeBlock().run(); setShowInsertMenu(false); }}
+                  className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+                  Code Block
+                </button>
+                <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
+                {/* Special Characters inline */}
+                <div className="relative">
+                  <button onClick={() => { setShowSpecialChars(!showSpecialChars); }}
+                    className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] transition-colors" style={insertMenuBtnStyle}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                    <span className="text-[12px] font-bold">&Omega;</span>
+                    Special Characters
+                  </button>
+                  {showSpecialChars && (
+                    <div className="absolute top-0 left-full ml-1 p-2 rounded-lg shadow-lg border z-50" style={{ background: "var(--panel-bg)", borderColor: "var(--border)", width: "200px" }}>
+                      <div className="grid grid-cols-9 gap-0.5">
+                        {SPECIAL_CHARS.map((ch) => (
+                          <button key={ch} onClick={() => { editor.chain().focus().insertContent(ch).run(); setShowSpecialChars(false); setShowInsertMenu(false); }}
+                            className="w-5 h-5 flex items-center justify-center rounded text-[12px] transition-colors cursor-pointer"
+                            style={{ color: "var(--foreground)" }}
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                            {ch}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </Grp>
+        <Sep />
+        {/* Find & Replace */}
+        <Grp label="Find">
+          <Btn onClick={onToggleFindReplace} title="Find & Replace">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          </Btn>
+        </Grp>
+        <Sep />
+        {/* Comment */}
+        <Grp label="Comment">
+          <Btn onClick={onAddComment} isActive={editor.isActive("comment")} title="Add Comment">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+          </Btn>
+        </Grp>
+        <Sep />
+        {/* Grammar Check */}
+        <Grp label="Grammar">
+          <div className="relative">
+            <Btn onClick={() => { setShowGrammar(!showGrammar); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); setShowInsertMenu(false); }} isActive={showGrammar} title="Grammar Check">
+              <span className="text-[10px] font-bold">ABC<svg width="7" height="7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ display: "inline", marginLeft: "1px", verticalAlign: "super" }}><polyline points="20 6 9 17 4 12" /></svg></span>
+            </Btn>
+            {showGrammar && <GrammarCheck editor={editor} onClose={() => setShowGrammar(false)} />}
+          </div>
+        </Grp>
+        <Sep />
+        {/* Margins */}
+        <Grp label="Margins">
+          <div className="relative">
+            <Btn onClick={() => { setShowMargins(!showMargins); setShowFontMenu(false); setShowSizeMenu(false); setShowExportMenu(false); setShowColorMenu(false); setShowSpecialChars(false); setShowInsertMenu(false); }} isActive={showMargins} title="Page Margins">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" /><rect x="7" y="7" width="10" height="10" rx="1" strokeDasharray="2 2" /></svg>
+            </Btn>
+            {showMargins && (
+              <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+                <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Margin presets</div>
+                {([
+                  { label: "Normal (1\")", top: 96, right: 96, bottom: 96, left: 96 },
+                  { label: "Narrow (0.5\")", top: 48, right: 48, bottom: 48, left: 48 },
+                  { label: "Moderate (0.75\")", top: 72, right: 72, bottom: 72, left: 72 },
+                  { label: "Wide (1.25\" sides)", top: 96, right: 120, bottom: 96, left: 120 },
+                ] as const).map((preset) => (
+                  <button key={preset.label} onClick={() => { onSetMargins({ top: preset.top, right: preset.right, bottom: preset.bottom, left: preset.left }); setShowMargins(false); }}
+                    className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                    {preset.label}
+                  </button>
+                ))}
+                <div className="border-t my-1" style={{ borderColor: "var(--border)" }} />
+                <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Custom (px)</div>
+                <div className="grid grid-cols-2 gap-1 px-3 py-1">
+                  {(["top", "right", "bottom", "left"] as const).map((side) => (
+                    <label key={side} className="flex items-center gap-1 text-[10px]" style={{ color: "var(--muted)" }}>
+                      <span className="w-6 capitalize">{side[0].toUpperCase()}</span>
+                      <input type="number" value={margins[side]} onChange={(e) => onSetMargins({ ...margins, [side]: Math.max(0, parseInt(e.target.value) || 0) })}
+                        className="w-12 h-5 px-1 text-[10px] rounded border outline-none" style={{ background: "var(--surface)", borderColor: "var(--border)", color: "var(--foreground)" }} />
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Grp>
+        <Sep />
+        {/* References */}
+        <Grp label="Refs">
+          <Btn onClick={onGenerateRefs} title="Generate Reference List">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
             </svg>
           </Btn>
-          {showExportMenu && (
-            <div className="absolute top-full right-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-36" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
-              <button onClick={() => { onExportWord(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <span style={{ color: "var(--purple)" }}>W</span> Word (.docx)
-              </button>
-              <button onClick={() => { onExportPdf(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <span style={{ color: "#ef4444" }}>P</span> PDF (.pdf)
-              </button>
-              <button onClick={() => { onPrint(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
-                Print
-              </button>
-            </div>
-          )}
-        </div>
-      </Grp>
-      <Sep />
-      {/* AI Writing Tools */}
-      <Grp label="AI">
-        <AiActionsMenu editor={editor} getContext={getContext} citations={citations} />
-      </Grp>
+        </Grp>
+        <Sep />
+        {/* Export */}
+        <Grp label="Export">
+          <div className="relative">
+            <Btn onClick={() => { setShowExportMenu(!showExportMenu); setShowFontMenu(false); setShowSizeMenu(false); setShowInsertMenu(false); }} title="Download">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+            </Btn>
+            {showExportMenu && (
+              <div className="absolute top-full right-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-36" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+                <button onClick={() => { onExportWord(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <span style={{ color: "var(--purple)" }}>W</span> Word (.docx)
+                </button>
+                <button onClick={() => { onExportPdf(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <span style={{ color: "#ef4444" }}>P</span> PDF (.pdf)
+                </button>
+                <button onClick={() => { onPrint(); setShowExportMenu(false); }} className="flex items-center gap-2 w-full px-3 py-2 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+                  Print
+                </button>
+              </div>
+            )}
+          </div>
+        </Grp>
+        <Sep />
+        {/* AI Writing Tools */}
+        <Grp label="AI">
+          <AiActionsMenu editor={editor} getContext={getContext} citations={citations} />
+        </Grp>
+        <Sep />
+        {/* Version History */}
+        <Grp label="History">
+          <Btn onClick={onShowHistory} title="Version History">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+          </Btn>
+        </Grp>
+      </div>
     </div>
   );
 }

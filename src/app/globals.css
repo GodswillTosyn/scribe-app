@@ -60,6 +60,28 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* ─── Editor ribbon (two-row toolbar) ─── */
+.editor-ribbon {
+  border-bottom: 1px solid var(--border);
+  background: var(--toolbar-bg);
+}
+.editor-ribbon-row1 {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  height: 36px;
+}
+.editor-ribbon-row2 {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px;
+  height: 32px;
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
+}
+
 /* Tiptap editor styles */
 .tiptap {
   outline: none;
