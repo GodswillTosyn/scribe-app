@@ -295,16 +295,17 @@ const HardPageBreak = TiptapNode.create({
   group: "block",
   atom: true,
   selectable: true,
+  draggable: false,
   parseHTML() { return [{ tag: "div[data-page-break]" }]; },
   renderHTML() { return ["div", { "data-page-break": "true", class: "hard-page-break" }]; },
   addKeyboardShortcuts() {
     return {
       "Mod-Enter": () => {
-        return this.editor.chain()
-          .insertContent({ type: this.name })
-          .insertContent({ type: "paragraph" })
-          .focus("end")
+        this.editor.chain()
+          .insertContent("<div data-page-break=\"true\"></div><p></p>")
+          .focus()
           .run();
+        return true;
       },
     };
   },
@@ -509,8 +510,8 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         <Btn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="2" y1="12" x2="22" y2="12" /></svg>
         </Btn>
-        <Btn onClick={() => editor.chain().focus().insertContent({ type: "hardPageBreak" }).insertContent({ type: "paragraph" }).run()} title="Page Break (Ctrl+Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12h4l2-2 2 4 2-2h4" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /></svg>
+        <Btn onClick={() => editor.chain().focus().insertContent("<div data-page-break=\"true\"></div><p></p>").run()} title="Insert Page Break (Ctrl+Enter)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" /><line x1="3" y1="12" x2="8" y2="12" /><line x1="16" y1="12" x2="21" y2="12" /><polyline points="10 10 12 12 14 10" /></svg>
         </Btn>
         <Btn onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive("codeBlock")} title="Code Block">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>

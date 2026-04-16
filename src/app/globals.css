@@ -506,13 +506,13 @@ body {
   50% { box-shadow: 0 0 12px rgba(124,58,237,0.35), 0 0 4px rgba(59,130,246,0.25); }
 }
 
-/* Hard page break — visible separator in editor, real break in print */
+/* Hard page break — visible page separator in editor */
 .hard-page-break {
   break-after: page;
   page-break-after: always;
-  height: 40px;
+  height: 48px;
   border: none;
-  margin: 24px 0;
+  margin: 0 calc(var(--page-pad-x, 72px) * -1);
   padding: 0;
   position: relative;
   display: flex;
@@ -520,30 +520,32 @@ body {
   justify-content: center;
   cursor: default;
   user-select: none;
+  background: var(--background);
 }
+/* Top edge shadow — end of page */
 .hard-page-break::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: 50%;
-  border-top: 1px dashed var(--border);
+  top: 0;
+  height: 4px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.04), transparent);
 }
+/* Label + bottom edge shadow — start of next page */
 .hard-page-break::after {
   content: "PAGE BREAK";
   display: inline-block;
   text-align: center;
   font-size: 8px;
   color: var(--muted);
-  opacity: 0.5;
+  opacity: 0.4;
   padding: 2px 12px;
-  background: var(--panel-bg);
   position: relative;
   z-index: 1;
   font-family: "Space Grotesk", system-ui, sans-serif;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  border-radius: 4px;
 }
 
 /* ─── Print styles ─── */
