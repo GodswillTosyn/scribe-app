@@ -188,6 +188,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
     try {
       // Decode base64 PDF data and extract text using pdfjs
       const { pdfjs } = await import("react-pdf");
+      pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
       const raw = atob(pdf.data.split(",")[1] || pdf.data);
       const bytes = new Uint8Array(raw.length);
       for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);

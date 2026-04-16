@@ -271,6 +271,48 @@ function AiActionsMenu({ editor, getContext, citations }: { editor: TiptapEditor
   );
 }
 
+/* ─── Line Spacing Picker ─── */
+function LineSpacingPicker({ editor }: { editor: TiptapEditor }) {
+  const [open, setOpen] = useState(false);
+  const spacings = [
+    { label: "Single", value: "1" },
+    { label: "1.15", value: "1.15" },
+    { label: "1.5", value: "1.5" },
+    { label: "Double", value: "2" },
+    { label: "2.5", value: "2.5" },
+    { label: "Triple", value: "3" },
+  ];
+
+  const applySpacing = (value: string) => {
+    // Apply line-height to all content via the editor wrapper
+    const el = document.querySelector(".editor-paginated-wrapper .tiptap") as HTMLElement;
+    if (el) el.style.lineHeight = value;
+    setOpen(false);
+  };
+
+  return (
+    <div className="relative">
+      <Btn onClick={() => setOpen(!open)} isActive={open} title="Line Spacing">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+          <polyline points="7 3 7 9" /><polyline points="7 15 7 21" />
+        </svg>
+      </Btn>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 py-1 rounded-xl shadow-lg border z-50 w-32" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
+          {spacings.map((s) => (
+            <button key={s.value} onClick={() => applySpacing(s.value)}
+              className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover)")} onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const FONTS = ["Space Grotesk", "Inter", "Arial", "Georgia", "Times New Roman", "Courier New", "Comic Sans MS"];
 const FONT_SIZES = ["12px", "14px", "16px", "18px", "20px", "24px", "28px", "32px"];
 
@@ -493,6 +535,9 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
         </Btn>
       </Grp>
       <Sep />
+      {/* Line Spacing */}
+      <LineSpacingPicker editor={editor} />
+      <Sep />
       {/* Lists & Insert */}
       <Grp label="Insert">
         <Btn onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive("bulletList")} title="Bullet List">
@@ -595,9 +640,10 @@ function Toolbar({ editor, onExportWord, onExportPdf, onGenerateRefs, onShowHist
             <div className="absolute top-full left-0 mt-1 py-1 rounded-lg shadow-lg border z-50 w-44" style={{ background: "var(--panel-bg)", borderColor: "var(--border)" }}>
               <div className="px-3 py-1 text-[10px] font-medium" style={{ color: "var(--muted)" }}>Margin presets</div>
               {([
-                { label: "Normal (0.75\")", top: 72, right: 72, bottom: 72, left: 72 },
+                { label: "Normal (1\")", top: 96, right: 96, bottom: 96, left: 96 },
                 { label: "Narrow (0.5\")", top: 48, right: 48, bottom: 48, left: 48 },
-                { label: "Wide (1.25\" sides)", top: 72, right: 120, bottom: 72, left: 120 },
+                { label: "Moderate (0.75\")", top: 72, right: 72, bottom: 72, left: 72 },
+                { label: "Wide (1.25\" sides)", top: 96, right: 120, bottom: 96, left: 120 },
               ] as const).map((preset) => (
                 <button key={preset.label} onClick={() => { onSetMargins({ top: preset.top, right: preset.right, bottom: preset.bottom, left: preset.left }); setShowMargins(false); }}
                   className="block w-full text-left px-3 py-1.5 text-xs transition-colors" style={{ color: "var(--foreground)" }}
@@ -1121,11 +1167,11 @@ export default function Editor({
   // ─── Comments ───
   const [comments, setComments] = useState<{ id: string; text: string; comment: string; from: number; to: number }[]>([]);
 
-  // ─── Margins ───
-  const [marginLeft, setMarginLeft] = useState(72);
-  const [marginRight, setMarginRight] = useState(72);
-  const [marginTop, setMarginTop] = useState(72);
-  const [marginBottom, setMarginBottom] = useState(72);
+  // ─── Margins (96px = 1 inch at 96dpi) ───
+  const [marginLeft, setMarginLeft] = useState(96);
+  const [marginRight, setMarginRight] = useState(96);
+  const [marginTop, setMarginTop] = useState(96);
+  const [marginBottom, setMarginBottom] = useState(96);
 
   const margins = { top: marginTop, right: marginRight, bottom: marginBottom, left: marginLeft };
   const setMargins = useCallback((m: { top: number; right: number; bottom: number; left: number }) => {
@@ -1519,12 +1565,23 @@ export default function Editor({
         {/* Ruler */}
         <Ruler leftMargin={marginLeft} rightMargin={marginRight} pageWidth={816} onChangeMargins={(left, right) => { setMarginLeft(left); setMarginRight(right); }} />
 
-        {/* Dynamic margin styles */}
-        <style>{`.editor-paginated-wrapper .tiptap { padding: ${marginTop}px ${marginRight}px ${marginBottom}px ${marginLeft}px !important; }`}</style>
+        {/* Dynamic margin + page size styles */}
+        <style>{`
+          .editor-paginated-wrapper .tiptap {
+            padding: ${marginTop}px ${marginRight}px ${marginBottom}px ${marginLeft}px !important;
+          }
+          .hard-page-break {
+            margin-left: -${marginLeft}px !important;
+            margin-right: -${marginRight}px !important;
+            margin-top: ${marginTop}px !important;
+            margin-bottom: 0 !important;
+          }
+        `}</style>
 
-        {/* Editor area — clean continuous surface, page breaks are inline nodes */}
+        {/* Editor area */}
         <div ref={scrollContainerRef} className="flex-1 overflow-auto editor-scroll-area" style={{ background: "var(--background)" }}>
-          <div style={{ padding: `${PAGE_GAP}px 0` }}>
+          <div className="editor-page-info">US Letter &middot; 8.5&quot; &times; 11&quot; &middot; {marginLeft >= 96 ? "1\"" : (marginLeft / 96).toFixed(1) + "\""} margins</div>
+          <div style={{ padding: `0 0 ${PAGE_GAP}px` }}>
             <div ref={wrapperRef} className="editor-paginated-wrapper">
               <EditorContent editor={editor} />
             </div>

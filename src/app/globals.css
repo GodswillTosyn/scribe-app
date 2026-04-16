@@ -69,31 +69,40 @@ body {
 }
 
 /* ─── Paginated editor ─── */
+/* Page size: US Letter (8.5" × 11" at 96dpi = 816 × 1056px) */
 .editor-scroll-area {
   --page-width: 816px;
-  --page-height: 1056px;
-  --page-pad-x: 72px;
-  --page-pad-y: 72px;
-  --page-gap: 32px;
-  --page-content-h: calc(var(--page-height) - var(--page-pad-y) * 2);  /* 912px */
+  --page-pad-x: 96px;     /* 1" left/right margins */
+  --page-pad-y: 96px;     /* 1" top/bottom margins */
+  --page-gap: 40px;
 }
 
 .editor-paginated-wrapper {
   width: var(--page-width);
   margin: 0 auto;
-  position: relative;
 }
 
-/* The editor surface — clean, no fake page overlays */
+/* The editor surface — looks like a paper document */
 .editor-paginated-wrapper .tiptap {
   padding: var(--page-pad-y) var(--page-pad-x);
-  min-height: var(--page-height);
+  min-height: 800px;
   background: var(--panel-bg);
-  border-left: 1px solid var(--border-subtle);
-  border-right: 1px solid var(--border-subtle);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  border: 1px solid var(--border-subtle);
+  border-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.02);
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+/* Page size label — shown subtly at top of editor */
+.editor-page-info {
+  text-align: center;
+  font-size: 9px;
+  color: var(--muted);
+  opacity: 0.4;
+  padding: 4px 0;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  letter-spacing: 0.05em;
 }
 
 /* Images in editor */
@@ -506,13 +515,14 @@ body {
   50% { box-shadow: 0 0 12px rgba(124,58,237,0.35), 0 0 4px rgba(59,130,246,0.25); }
 }
 
-/* Hard page break — visible page separator in editor */
+/* Hard page break — visual page separator */
 .hard-page-break {
   break-after: page;
   page-break-after: always;
-  height: 48px;
+  height: 56px;
   border: none;
-  margin: 0 calc(var(--page-pad-x, 72px) * -1);
+  /* Extend to full page width by pulling into the margins */
+  margin: var(--page-pad-y, 96px) calc(var(--page-pad-x, 96px) * -1);
   padding: 0;
   position: relative;
   display: flex;
@@ -521,31 +531,32 @@ body {
   cursor: default;
   user-select: none;
   background: var(--background);
+  /* Top/bottom shadows to simulate page edges */
+  box-shadow:
+    inset 0 4px 6px -4px rgba(0,0,0,0.08),
+    inset 0 -4px 6px -4px rgba(0,0,0,0.08);
 }
-/* Top edge shadow — end of page */
 .hard-page-break::before {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 4px;
-  background: linear-gradient(to bottom, rgba(0,0,0,0.04), transparent);
+  left: 20%;
+  right: 20%;
+  top: 50%;
+  border-top: 1px dashed var(--border);
 }
-/* Label + bottom edge shadow — start of next page */
 .hard-page-break::after {
-  content: "PAGE BREAK";
+  content: "— Page Break —";
   display: inline-block;
   text-align: center;
-  font-size: 8px;
+  font-size: 9px;
   color: var(--muted);
-  opacity: 0.4;
-  padding: 2px 12px;
+  opacity: 0.5;
+  padding: 2px 16px;
+  background: var(--background);
   position: relative;
   z-index: 1;
   font-family: "Space Grotesk", system-ui, sans-serif;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* ─── Print styles ─── */
